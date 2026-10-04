@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: bmepilots-portal
+  datasource:
+    url: ${DB_URL:jdbc:mariadb://127.0.0.1:3307/bmepilots}
+    username: ${DB_USER:bmepilots}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 8
+      connection-init-sql: SET time_zone = '+00:00'
+  flyway:
+    enabled: true
+  jackson:
+    time-zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 251MB
+      file-size-threshold: 0
+server:
+  address: 127.0.0.1
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+  servlet:
+    session:
+      timeout: 60m
+      cookie:
+        name: BMESESSION
+        http-only: true
+        secure: ${COOKIE_SECURE:false}
+        same-site: lax
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+logging:
+  file:
+    name: ${APP_LOG_FILE:./logs/portal.log}
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 14
+      total-size-cap: 200MB
+portal:
+  documents:
+    storage: ${DOCUMENT_STORAGE:./storage/documents}
+  bootstrap:
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    username: ${MAIL_USERNAME:}
+    password-file: ${MAIL_PASSWORD_FILE:}
+    storage: ${MAIL_STORAGE:./storage/attachments}
+    interval-ms: ${MAIL_INTERVAL_MS:60000}
+    initial-days: ${MAIL_INITIAL_DAYS:90}
