@@ -40,7 +40,7 @@ The workflow builds and publishes only. It does not SSH to the VM, update Compos
 
 ## Maintenance and verification
 
-On 2026-10-05 both repository workflows passed actionlint 1.7.12, including its ShellCheck validation. The backend service database, username, port and password variable were checked against all three MariaDB integration-test classes. This is local validation; GitHub execution and GHCR publication have not yet been verified.
+On 2026-10-05 both repository workflows passed actionlint 1.7.12, including its ShellCheck validation. The backend service database, username, port and password variable were checked against all three MariaDB integration-test classes. This local validation was followed by a successful GitHub verification/publication run on 2026-10-05; see STATUS.md for the run link.
 
 - When upgrading Java, update both CI and the Dockerfile and rerun the full MariaDB integration suite.
 - When changing the MariaDB version, coordinate the image with `../db` and test it before rollout.

@@ -28,7 +28,7 @@ Updated: 2026-10-05. Keep this current with every implementation change.
 ## Known limitations / planned follow-up
 - Real inbox browser rendering remains unverified; live backend Gmail import succeeded.
 - No SMTP, email verification, account recovery UI/token workflow, external calendar sync or additional mail providers.
-- Private VM deployment is running; public HTTPS/Cloudflare and automatic VM updates remain pending. Hosted CI/GHCR publication is not yet verified.
+- Private VM deployment is running; public HTTPS/Cloudflare and automatic VM updates remain pending. Hosted CI and GHCR publication succeeded on 2026-10-05.
 - No automated backup/offsite job yet; do not store irreplaceable mail without implementing operations backup.
 - Mail offset pagination, periodic retry (no exponential backoff), no source deletion reconciliation, no automatic retention, no antivirus/CID preview, no orphan cleanup.
 - Session restart logout; local HTTP only. Migration/runtime SQL credentials not yet separated.
@@ -62,5 +62,7 @@ Updated: 2026-10-05. Keep this current with every implementation change.
 - VM gateway checks passed: SPA/deep links, anonymous rejection, CSRF/login, authenticated dashboard/community/admin routes, upload/comment creation, logout rejection. Database metadata, comments and exact file bytes survived forced recreation of all three containers; only the test post was then removed.
 - Fresh per-VM random secrets were generated without printing passwords. Non-root backend storage ownership and group-readable secret permissions were verified by successful startup/upload. VM Gmail is disabled; local development Gmail settings were not copied.
 - A coordinated local backup stopped backend writes, captured MariaDB plus both file stores and image references, and restarted the existing backend. SHA256, gzip and tar integrity passed. Full restore rehearsal, scheduling and encrypted offsite copies are not yet implemented.
-- CI workflows passed actionlint 1.7.12/ShellCheck locally. GitHub-hosted execution and image publication remain unverified; the VM currently runs source-built images tagged vm-20261005, not registry images.
+- CI workflows passed actionlint 1.7.12/ShellCheck locally. GitHub-hosted execution and image publication subsequently succeeded; the VM currently runs source-built images tagged vm-20261005, not registry images.
 - Spotless and documented Maven verify rerun on Java 21: 12 tests, zero failures/errors/skips; isolated MariaDB3308 removed afterward. V1-V7 validated.
+
+- Hosted verification and GHCR publication succeeded: [backend run](https://github.com/bmepilots/backend/actions/runs/37312796111), [frontend run](https://github.com/bmepilots/frontend/actions/runs/37312807646). The VM remains on the verified source-built image pair; image publication alone does not roll out a new version. All three repositories were pushed successfully.
