@@ -40,6 +40,24 @@ public class DocumentsController {
     return service.create(title, description, files);
   }
 
+  @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+  @ResponseStatus(HttpStatus.CREATED)
+  Object publish(@Valid @RequestBody DocumentsService.Publish change) {
+    return service.publish(change);
+  }
+
+  @PostMapping(value = "/uploads", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @ResponseStatus(HttpStatus.CREATED)
+  Object stage(@RequestParam List<MultipartFile> file) {
+    return service.stage(file);
+  }
+
+  @DeleteMapping("/uploads/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  void discard(@PathVariable String id) {
+    service.discard(id);
+  }
+
   @PatchMapping("/{id}")
   Object update(@PathVariable String id, @Valid @RequestBody DocumentsService.Change change) {
     return service.update(id, change);

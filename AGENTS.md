@@ -15,6 +15,8 @@ Read `README.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, and `docs/STATUS.md` be
 - `.env.mail.local` and `.secrets/` are private local mail configuration. Never print or inspect password contents for routine verification; use connection status and aggregate sync counts. Preserve restrictive filesystem permissions.
 - Maintain the authorized private VM deployment: base Compose publishes no ports; its HTTP preview override exposes only the gateway on VM loopback for SSH forwarding. Cloudflare/public HTTPS and automatic VM updates remain future work; never describe configured workflows as successfully executed without evidence.
 - The container runs as UID/GID 10001. Preserve LF shell scripts, backend storage ownership and readable Docker secret mounts; never relax secret permissions to world-readable to fix startup.
+- Preserve the Docker API-contract label (`io.bmepilots.api.contracts`) and coordinate it with frontend requirements before changing/removing endpoints. Staged document requests carry one file each; keep private ownership, expiry, transactional publication and cleanup invariants documented in docs/DOCUMENTS.md.
+- Optional Flyway credentials fall back to the actual datasource properties. Keep integration tests on isolated3308 even when overriding deployment connection settings. Forwarded headers default to none; enable native handling only with the exact trusted gateway configured by db/deploy.
 - Do not add speculative infrastructure or placeholder implementations. Document deferred capabilities honestly.
 
 ## Verification

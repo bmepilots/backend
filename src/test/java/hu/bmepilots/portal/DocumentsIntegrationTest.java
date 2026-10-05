@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import hu.bmepilots.portal.common.error.ApiException;
 import hu.bmepilots.portal.common.security.PortalPrincipal;
+import hu.bmepilots.portal.documents.application.DocumentUploadCleanup;
 import hu.bmepilots.portal.documents.application.DocumentsService;
 import hu.bmepilots.portal.documents.infrastructure.DocumentStorage;
 import java.io.*;
@@ -11,6 +12,9 @@ import java.net.*;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.*;
@@ -45,6 +49,7 @@ class DocumentsIntegrationTest {
   @Autowired PasswordEncoder passwords;
   @Autowired DocumentsService service;
   @Autowired DocumentStorage storage;
+  @Autowired DocumentUploadCleanup cleanup;
 
   private record Upload(String filename, long bytes) {}
 
@@ -95,21 +100,33 @@ class DocumentsIntegrationTest {
     }
 
     HttpResponse<String> upload(List<Upload> files) throws Exception {
+      return multipart("/documents", "files", files, true);
+    }
+
+    HttpResponse<String> stage(List<Upload> files) throws Exception {
+      return multipart("/documents/uploads", "file", files, false);
+    }
+
+    HttpResponse<String> multipart(String path, String field, List<Upload> files, boolean metadata)
+        throws Exception {
       String boundary = "document-fixture-" + UUID.randomUUID();
       List<HttpRequest.BodyPublisher> parts = new ArrayList<>();
-      parts.add(
-          HttpRequest.BodyPublishers.ofString(
-              "--"
-                  + boundary
-                  + "\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\nCommunity notes\r\n--"
-                  + boundary
-                  + "\r\nContent-Disposition: form-data; name=\"description\"\r\n\r\nShared flight notes\r\n"));
+      if (metadata)
+        parts.add(
+            HttpRequest.BodyPublishers.ofString(
+                "--"
+                    + boundary
+                    + "\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\nCommunity notes\r\n--"
+                    + boundary
+                    + "\r\nContent-Disposition: form-data; name=\"description\"\r\n\r\nShared flight notes\r\n"));
       for (var file : files) {
         parts.add(
             HttpRequest.BodyPublishers.ofString(
                 "--"
                     + boundary
-                    + "\r\nContent-Disposition: form-data; name=\"files\"; filename=\""
+                    + "\r\nContent-Disposition: form-data; name=\""
+                    + field
+                    + "\"; filename=\""
                     + file.filename()
                     + "\"\r\nContent-Type: application/pdf\r\n\r\n"));
         parts.add(HttpRequest.BodyPublishers.ofInputStream(() -> new SizedInput(file.bytes())));
@@ -117,7 +134,7 @@ class DocumentsIntegrationTest {
       }
       parts.add(HttpRequest.BodyPublishers.ofString("--" + boundary + "--\r\n"));
       return http.send(
-          HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/v1/documents"))
+          HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/v1" + path))
               .header("X-CSRF-TOKEN", token)
               .header("Content-Type", "multipart/form-data; boundary=" + boundary)
               .POST(
@@ -126,6 +143,199 @@ class DocumentsIntegrationTest {
               .build(),
           HttpResponse.BodyHandlers.ofString());
     }
+  }
+
+  private String staged(Client client, String name, long size) throws Exception {
+    var response = client.stage(List.of(new Upload(name, size)));
+    assertThat(response.statusCode()).as(response.body()).isEqualTo(201);
+    var upload = json.readTree(response.body());
+    assertThat(upload.get("filename").asText()).isEqualTo(name);
+    assertThat(upload.get("sizeBytes").asLong()).isEqualTo(size);
+    assertThat(upload.get("expiresAt").asText()).isNotBlank();
+    assertThat(upload.toString()).doesNotContain("storageKey", "storage_key");
+    return upload.get("id").asText();
+  }
+
+  private Map<String, Object> publication(List<String> ids) {
+    return Map.of(
+        "title", "Staged community notes", "description", "Published together", "uploadIds", ids);
+  }
+
+  @Test
+  void stagedUploadsRemainPrivateAndPublishFiveFilesAtomically() throws Exception {
+    Client author = member("Staged author");
+    Client peer = member("Staged peer");
+    Client admin = new Client();
+    admin.login("integration-admin@example.test", "Integration-admin-password-2026");
+    List<String> ids = new ArrayList<>();
+    for (int index = 0; index < 5; index++)
+      ids.add(staged(author, "part-" + index + ".txt", index + 1));
+    assertThat(
+            db.sql("SELECT COUNT(*) FROM document_posts WHERE created_by=?")
+                .param(author.id)
+                .query(Long.class)
+                .single())
+        .isZero();
+    peer.ok("POST", "/documents", publication(ids), 404);
+    admin.ok("POST", "/documents", publication(ids), 404);
+    peer.ok("DELETE", "/documents/uploads/" + ids.getFirst(), null, 404);
+    author.ok("POST", "/documents", publication(List.of(ids.getFirst(), ids.getFirst())), 400);
+    author.ok("POST", "/documents", publication(Collections.nCopies(6, ids.getFirst())), 400);
+    author.ok("POST", "/documents", publication(List.of()), 400);
+    assertThat(author.send("POST", "/documents", publication(ids), false).statusCode())
+        .isEqualTo(403);
+    var post = author.ok("POST", "/documents", publication(ids), 201);
+    String postId = post.get("id").asText();
+    assertThat(post.get("fileCount").asInt()).isEqualTo(5);
+    assertThat(post.get("authorId").asText()).isEqualTo(author.id);
+    assertThat(
+            db.sql("SELECT COUNT(*) FROM document_uploads WHERE created_by=?")
+                .param(author.id)
+                .query(Long.class)
+                .single())
+        .isZero();
+    var detail = peer.ok("GET", "/documents/" + postId, null, 200);
+    for (int index = 0; index < 5; index++) {
+      assertThat(detail.get("files").get(index).get("id").asText()).isEqualTo(ids.get(index));
+      assertThat(
+              peer.send(
+                      "GET",
+                      "/documents/" + postId + "/files/" + ids.get(index) + "/download",
+                      null,
+                      false)
+                  .body())
+          .isEqualTo("x".repeat(index + 1));
+    }
+    author.ok("POST", "/documents", publication(ids), 404);
+    author.ok("DELETE", "/documents/uploads/" + ids.getFirst(), null, 404);
+    author.ok("DELETE", "/documents/" + postId + "?version=0", null, 204);
+  }
+
+  @Test
+  void stagingEnforcesSingleFileSizeQuotaAndCsrf() throws Exception {
+    Client author = member("Staging limits");
+    assertThat(author.stage(List.of(new Upload("empty.txt", 0))).statusCode()).isEqualTo(400);
+    assertThat(
+            author.stage(List.of(new Upload("one.txt", 1), new Upload("two.txt", 1))).statusCode())
+        .isEqualTo(400);
+    String maximum = staged(author, "maximum.txt", DocumentStorage.MAX_FILE_BYTES);
+    assertThat(
+            author
+                .stage(List.of(new Upload("large.txt", DocumentStorage.MAX_FILE_BYTES + 1)))
+                .statusCode())
+        .isEqualTo(413);
+    String goodToken = author.token;
+    author.token = "invalid";
+    assertThat(author.stage(List.of(new Upload("csrf.txt", 1))).statusCode()).isEqualTo(403);
+    author.token = goodToken;
+    Client anonymous = new Client();
+    anonymous.refresh();
+    assertThat(anonymous.stage(List.of(new Upload("anonymous.txt", 1))).statusCode())
+        .isEqualTo(401);
+    List<String> ids = new ArrayList<>(List.of(maximum));
+    for (int index = 1; index < 10; index++) ids.add(staged(author, "quota-" + index + ".txt", 1));
+    var overQuota = author.stage(List.of(new Upload("eleventh.txt", 1)));
+    assertThat(overQuota.statusCode()).as(overQuota.body()).isEqualTo(409);
+    assertThat(json.readTree(overQuota.body()).get("code").asText()).isEqualTo("UPLOAD_LIMIT");
+    for (String id : ids) author.ok("DELETE", "/documents/uploads/" + id, null, 204);
+    assertThat(
+            db.sql("SELECT COUNT(*) FROM document_uploads WHERE created_by=?")
+                .param(author.id)
+                .query(Long.class)
+                .single())
+        .isZero();
+  }
+
+  @Test
+  void failedPublishPreservesStagesAndExpiryCleanupKeepsPublishedFiles() throws Exception {
+    Client author = member("Staged cleanup");
+    String first = staged(author, "retained.txt", 7);
+    String second = staged(author, "missing.txt", 8);
+    String firstKey =
+        db.sql("SELECT storage_key FROM document_uploads WHERE id=?")
+            .param(first)
+            .query(String.class)
+            .single();
+    String secondKey =
+        db.sql("SELECT storage_key FROM document_uploads WHERE id=?")
+            .param(second)
+            .query(String.class)
+            .single();
+    author.ok("POST", "/documents", publication(List.of(first, UUID.randomUUID().toString())), 404);
+    Files.delete(storage.path(secondKey));
+    author.ok("POST", "/documents", publication(List.of(first, second)), 409);
+    assertThat(
+            db.sql("SELECT COUNT(*) FROM document_posts WHERE created_by=?")
+                .param(author.id)
+                .query(Long.class)
+                .single())
+        .isZero();
+    assertThat(
+            db.sql("SELECT COUNT(*) FROM document_uploads WHERE created_by=?")
+                .param(author.id)
+                .query(Long.class)
+                .single())
+        .isEqualTo(2);
+    assertThat(
+            db.sql(
+                    "SELECT COUNT(*) FROM audit_log WHERE entity_id=? AND action='DOCUMENT_FILE_UPLOADED'")
+                .param(first)
+                .query(Long.class)
+                .single())
+        .isZero();
+    author.ok("DELETE", "/documents/uploads/" + second, null, 204);
+    String postId =
+        author.ok("POST", "/documents", publication(List.of(first)), 201).get("id").asText();
+    String expired = staged(author, "expired.txt", 9);
+    String expiredKey =
+        db.sql("SELECT storage_key FROM document_uploads WHERE id=?")
+            .param(expired)
+            .query(String.class)
+            .single();
+    db.sql(
+            "UPDATE document_uploads SET expires_at=DATE_SUB(CURRENT_TIMESTAMP(6),INTERVAL 1 MINUTE) WHERE id=?")
+        .param(expired)
+        .update();
+    author.ok("POST", "/documents", publication(List.of(expired)), 404);
+    String pending = staged(author, "pending.txt", 10);
+    String pendingKey =
+        db.sql("SELECT storage_key FROM document_uploads WHERE id=?")
+            .param(pending)
+            .query(String.class)
+            .single();
+    Path orphan = storage.path(UUID.randomUUID().toString());
+    Path partial =
+        storage.path(UUID.randomUUID().toString()).resolveSibling(UUID.randomUUID() + ".part");
+    Path recent = storage.path(UUID.randomUUID().toString());
+    Files.writeString(orphan, "crash residue");
+    Files.writeString(partial, "interrupted stream");
+    Files.writeString(recent, "active request grace");
+    FileTime old = FileTime.from(Instant.now().minus(49, ChronoUnit.HOURS));
+    for (Path path : List.of(orphan, partial, storage.path(firstKey), storage.path(pendingKey)))
+      Files.setLastModifiedTime(path, old);
+    cleanup.cleanup();
+    assertThat(Files.exists(storage.path(expiredKey))).isFalse();
+    assertThat(Files.exists(orphan)).isFalse();
+    assertThat(Files.exists(partial)).isFalse();
+    assertThat(Files.exists(recent)).isTrue();
+    assertThat(Files.exists(storage.path(firstKey))).isTrue();
+    assertThat(Files.exists(storage.path(pendingKey))).isTrue();
+    assertThat(
+            db.sql("SELECT COUNT(*) FROM document_uploads WHERE id=?")
+                .param(expired)
+                .query(Long.class)
+                .single())
+        .isZero();
+    assertThat(
+            db.sql(
+                    "SELECT COUNT(*) FROM audit_log WHERE entity_id=? AND action='DOCUMENT_UPLOAD_EXPIRED'")
+                .param(expired)
+                .query(Long.class)
+                .single())
+        .isEqualTo(1);
+    author.ok("DELETE", "/documents/uploads/" + pending, null, 204);
+    author.ok("DELETE", "/documents/" + postId + "?version=0", null, 204);
+    Files.delete(recent);
   }
 
   /** Generates a bounded upload without loading a 50 MB fixture into either JVM's heap. */

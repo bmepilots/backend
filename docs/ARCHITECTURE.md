@@ -40,6 +40,8 @@ Each protected request validates ACTIVE status and auth_version against the DB a
 
 Authentication throttles per remote IP and normalized email in bounded in-memory windows. This is single-instance development behavior. Do not trust forwarded client-IP headers without explicit future proxy trust configuration. Validation limits request field sizes. Cookie sessions and CSRF do not by themselves defend a compromised browser.
 
+`SERVER_FORWARD_HEADERS_STRATEGY` defaults explicitly to `none`. The public deployment may enable native Tomcat forwarding with `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES=172[.]30[.]27[.]2`, the dedicated Caddy IP. Its gateway must accept client identity only from the dedicated cloudflared address and overwrite untrusted incoming forwarding headers. This keeps the existing limiter on the verified client IP instead of collapsing all users onto the proxy IP. Do not enable `framework` forwarding or broad trust on a directly exposed backend. The backend remains unpublished; public trust configuration is owned by `db/deploy`.
+
 ## User lifecycle
 Registration -> PENDING_APPROVAL/USER. Allowed transitions: pending -> active/rejected; active -> suspended/disabled; suspended -> active/disabled; disabled -> active. Rejected registrations are not automatically reactivated. Roles are USER or ADMIN, one effective role per user, represented by roles/user_roles for future extension. ADMIN can read member content and use /admin/**. The roles ADMIN row is locked for privileged lifecycle changes to serialize the last-active-admin guard.
 
@@ -53,10 +55,15 @@ Mutations use version fields for users, settings, announcements, documents, comm
 - V5: document posts/files/comments and non-destructive import of existing knowledge articles.
 - V6: calendar entries, link authorship and a starter General link category when needed.
 - V7: API request method, route template, status and duration in the audit log.
+- V8: private document staging references, owner, expiration and file metadata.
 
 Creation/update/audit/mail timestamps use UTC LocalDateTime for DATETIME(6); the frontend interprets these as UTC. Calendar startsAt/endsAt are the explicit exception: Europe/Budapest local wall times with no UTC conversion, and exclusive all-day end dates. Input emails are trimmed/lowercased for identity (no Gmail-specific canonicalization). UTF8MB4 text; FK relations prevent invalid references. Cursor state is co-located with mail_folders rather than a separate table. Sender fields are optimized on the message; recipients remain a one-to-many table.
 
 Application services use parameterized SQL. The only dynamic SQL fragments are developer-controlled optional clauses, never user-provided table/column names. Search escapes LIKE wildcard input and caps lengths/pages. Lists have server-side limits. Current mail pagination is offset-based; cursor pagination is a documented future improvement.
+
+Flyway accepts separate `FLYWAY_URL`, `FLYWAY_USER` and `FLYWAY_PASSWORD` (or container `FLYWAY_PASSWORD_FILE`). Each defaults to the actual corresponding Spring datasource property, preserving both development and isolated integration-test connections. Deployment can run JDBC with DML-only runtime grants while Flyway uses schema-scoped migration privileges. Merely supporting these variables does not prove grants were separated on a host; record that verification in STATUS. Both credentials are available inside the same backend process at startup, so this separates accidental runtime SQL capabilities, not host/process compromise.
+
+New Shared Document clients stage each file privately before one atomic publication. A user-row lock serializes quota and consumption changes; publication locks all selected stages, records the post/files/audit and consumes stage metadata together. No file moves occur during publication. Hourly cleanup expires unused stages, then reconciles generated files older than 48 hours against both staging and published metadata. Keep database and file-store backups together, including stage rows. Legacy multipart creation remains compatible with older clients. Details and invariants are in DOCUMENTS.
 
 ## Audit and transaction boundaries
 Content/user/settings mutations and their audit rows share transactions. Audit contains actor ID, action, entity type/id and timestamp, never passwords/message bodies. Actor can be NULL for bootstrap/system activity. There is no audit-edit API. Development and the initial VM stack share a database-scoped account with Flyway privileges: SQL-level append-only audit enforcement and separate runtime/migration users remain production follow-ups.

@@ -38,6 +38,8 @@ The full commit tag identifies the source revision; `main` is a moving convenien
 
 The workflow builds and publishes only. It does not SSH to the VM, update Compose, migrate a deployed database or change Cloudflare. The server updater must select compatible backend/frontend digests, back up persistent data, wait for healthchecks, and handle failures separately. Flyway migrations still belong exclusively to this repository and are applied by backend startup; rolling back an image does not reverse a database migration.
 
+The runtime image label `io.bmepilots.api.contracts="1,2"` declares support for both the original multipart API (contract 1) and staged document uploads (contract 2). The frontend declares its required contract in its image. Deployment must check this pair before rollout, so an earlier-finishing frontend workflow cannot put a new client on an incompatible old backend. Unlabeled historical images support contract 1 only. Update this label deliberately when adding/removing a client contract and coordinate the sibling frontend and updater; workflow success alone does not establish cross-repository compatibility.
+
 ## Maintenance and verification
 
 On 2026-10-05 both repository workflows passed actionlint 1.7.12, including its ShellCheck validation. The backend service database, username, port and password variable were checked against all three MariaDB integration-test classes. This local validation was followed by a successful GitHub verification/publication run on 2026-10-05; see STATUS.md for the run link.

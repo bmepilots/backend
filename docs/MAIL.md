@@ -1,6 +1,6 @@
 # Mail module operations and extension
 
-Updated: 2026-10-04.
+Updated: 2026-10-05.
 
 ## Enable a real Gmail account
 Requires Gmail IMAP access and an App Password, which generally requires Google two-step verification and is subject to account restrictions. Never provide the normal Gmail password. Place the App Password alone in a private UTF-8 file outside Git with access restricted to the service account. Set MAIL_USERNAME, MAIL_PASSWORD_FILE (absolute path), and MAIL_ENABLED=true; restart the backend. The admin status page can test connectivity and enqueue a sync. Do not paste secrets into chat, source, workflow logs or browser configuration.
@@ -20,6 +20,12 @@ MAIL_INTERVAL_MS=60000
 The App Password itself is stored only in `.secrets/gmail-app-password`, with Windows access limited to the current user and SYSTEM. Neither file is tracked. On another machine, create your own private password file and local configuration; do not copy secrets into documentation. Use plain unquoted values; the launcher resolves relative file/storage paths against the backend repository. Explicit process environment values override this local file. `dev.ps1 -Test` does not load it.
 
 Start with `pwsh -File scripts/dev.ps1`. To disable local polling, set MAIL_ENABLED=false in the process environment before starting, or edit the local configuration and restart. For a replacement credential, securely replace the contents of the password file, restart, and verify the admin connection/sync status. Never print the password while troubleshooting. Mail is fetched read-only; no SMTP sending or Gmail flag changes are implemented.
+
+## Ubuntu VM configuration and evidence
+
+The first VM deployment intentionally left mail disabled because the ignored workstation credential is not distributed through Git or build contexts. On 2026-10-05 the existing operator-provided App Password was installed privately at `/srv/bmepilots/db/deploy/secrets/mail_app_password`, owned by `root:10001` with mode `0640`. The backend reads its Docker secret mount at `/run/secrets/mail_app_password`. The VM's private Compose environment now enables `MAIL_ENABLED=true` and `MAIL_USERNAME=bmepilots2026@gmail.com`; the backend was recreated successfully.
+
+Verified through the authenticated VM admin API on 2026-10-05: connection test returned HTTP 204, `lastSuccessAt` was `2026-10-05T13:36:37` UTC, `lastError` was null and `failedMessages` was zero. This is VM evidence, distinct from the earlier local import. Credential contents were neither printed nor added to Git. Source defaults remain disabled for a fresh checkout until its operator installs a private credential. The backend needs outbound TLS to Gmail IMAP on port 993; its dedicated egress network provides this while API and database ports remain unpublished.
 
 ## Processing flow
 Scheduler -> MailSyncService -> MailProvider -> GmailImapMailProvider -> local MariaDB + private attachment storage -> REST -> React. IMAP is fixed to imap.gmail.com:993 with TLS server identity checking and connection/read/write timeouts. Folders are opened read-only and peek mode is requested. User browsing never connects to Gmail.

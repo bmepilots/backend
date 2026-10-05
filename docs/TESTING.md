@@ -21,6 +21,8 @@ For non-PowerShell environments: start `docker compose -f compose.test.yml up -d
 - Partial mail-state PATCH preserves the other flag and private state across repeated imports.
 - Shared document posts with 1–5 files, author attribution, peer comments, author/admin moderation, stale versions and post/file/comment association checks.
 - Exact 50 MiB upload acceptance; oversized, empty and six-file rejection; stream-level byte counting, storage traversal prevention and rollback cleanup.
+- Staged per-file uploads: private references, five-file atomic publication/order, owner-only publish/discard including admin isolation, 24-hour expiration, ten-pending-file quota, exact 50 MiB/oversize boundaries, single-file requests and CSRF.
+- Failed staged publication preserves valid references and creates no partial post/audit. Cleanup removes expired metadata and old crash/partial files while retaining published, active staged and recently created files.
 - Community link and calendar contributions, nonowner/admin permissions, preserved authorship, safe links, CSRF and audit actors.
 - Calendar range overlap, exclusive all-day ends, null-end deadlines and Budapest civil-time preservation across a daylight-saving transition.
 - Named login/logout activity and separate request metadata, including denied requests and excluding raw query strings/credential identifiers.

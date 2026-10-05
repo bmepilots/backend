@@ -4,7 +4,7 @@ Updated: 2026-10-05. Keep this current with every implementation change.
 
 ## Implemented in the initial application pass
 - Java 21 / Spring Boot 4.0.8 project with Maven Wrapper and feature packages.
-- Seven Flyway migrations: identity, content, mail, durable mail failures, Shared Documents, calendar/community links and request-audit metadata.
+- Eight Flyway migrations: identity, content, mail, durable mail failures, Shared Documents, calendar/community links, request-audit metadata and staged document uploads.
 - Argon2id passwords, cookie session, CSRF, bootstrap admin, approval lifecycle, backend ADMIN guard, optimistic versions and last-active-admin protection.
 - Announcements, read-only legacy knowledge archive, Shared Documents with private multi-file uploads/comments, member-contributed calendar and useful links, settings and audit APIs.
 - Dashboard composition; shared local inbox, recipient/attachment downloads and per-user state.
@@ -60,9 +60,20 @@ Updated: 2026-10-05. Keep this current with every implementation change.
 - MariaDB 11.8.8, backend and frontend are healthy. Caddy serves the SPA and proxies /api from 127.0.0.1:8088; access is through SSH forwarding. No public tunnel is configured.
 - Persistent ext4 disk mounted at /srv/bmepilots contains MariaDB, documents, attachments and rolling logs. Docker has a RequiresMountsFor dependency; startup checks mount presence. Existing development DB3307 was not touched.
 - VM gateway checks passed: SPA/deep links, anonymous rejection, CSRF/login, authenticated dashboard/community/admin routes, upload/comment creation, logout rejection. Database metadata, comments and exact file bytes survived forced recreation of all three containers; only the test post was then removed.
-- Fresh per-VM random secrets were generated without printing passwords. Non-root backend storage ownership and group-readable secret permissions were verified by successful startup/upload. VM Gmail is disabled; local development Gmail settings were not copied.
+- Fresh per-VM random secrets were generated without printing passwords. Non-root backend storage ownership and group-readable secret permissions were verified by successful startup/upload. VM Gmail was initially disabled because local development secrets were not part of the source transfer; it was subsequently enabled and verified as recorded below.
 - A coordinated local backup stopped backend writes, captured MariaDB plus both file stores and image references, and restarted the existing backend. SHA256, gzip and tar integrity passed. Full restore rehearsal, scheduling and encrypted offsite copies are not yet implemented.
 - CI workflows passed actionlint 1.7.12/ShellCheck locally. GitHub-hosted execution and image publication subsequently succeeded; the VM currently runs source-built images tagged vm-20261005, not registry images.
 - Spotless and documented Maven verify rerun on Java 21: 12 tests, zero failures/errors/skips; isolated MariaDB3308 removed afterward. V1-V7 validated.
 
 - Hosted verification and GHCR publication succeeded: [backend run](https://github.com/bmepilots/backend/actions/runs/37312796111), [frontend run](https://github.com/bmepilots/frontend/actions/runs/37312807646). The VM remains on the verified source-built image pair; image publication alone does not roll out a new version. All three repositories were pushed successfully.
+
+## Public deployment preparation and staged uploads — 2026-10-05
+
+- Added V8 and owner-only single-file staging: POST `/documents/uploads`, DELETE `/documents/uploads/{id}`, and JSON POST `/documents` with ordered `uploadIds`. Existing multipart clients remain supported. Five files of up to 50 MiB each can now be published without one oversized proxy request.
+- Stages expire after 24 hours and have a ten-active-reference quota per member. A per-user database lock serializes creation/consumption; atomic publication retains valid references on rollback. Administrators cannot use another member's unpublished uploads. Metadata, comments, authorship and moderation contracts remain unchanged.
+- Hourly cleanup removes expired uploads with system audit events and reconciles UUID/partial files older than 48 hours against both committed staging and published metadata. Recent, referenced and unknown files are preserved. A lost publication response requires checking the document list before starting another upload; no idempotency-key contract is claimed.
+- Added optional separate Flyway connection credentials with datasource fallback and `FLYWAY_PASSWORD_FILE` entrypoint support. Forwarded headers explicitly default to `none`; the public deployment can opt into native processing only with its fixed trusted Caddy proxy. Runtime/migration grants and public proxy behavior still require host-side verification.
+- Backend Docker images declare API contracts `1,2` for compatible paired rollouts; the server updater must inspect the frontend requirement before promotion.
+- Java 21 compilation and final Spotless check succeeded. The documented dedicated MariaDB3308 Maven verify passed: **15 tests, zero failures, errors or skips**. V1–V8 applied from an empty schema, and repeated startup validated all eight. New real-HTTP tests cover private staging, ordered five-file publication, maximum-size/oversize uploads, quota, ownership, CSRF, rollback, expiration and orphan cleanup. The disposable test container was removed afterward; no development DB3307 data was used.
+- Gmail on the Ubuntu VM is now enabled. The operator credential was installed outside Git with `root:10001` ownership/mode0640 and the backend recreated successfully. Authenticated connection test returned204; last successful import was `2026-10-05T13:36:37` UTC, account error null and durable failed-message count zero. No secret contents were printed. See MAIL for the configuration and initial-disabled explanation.
+- This entry records implementation and local tests, not a new hosted CI run or public rollout. Record subsequent CI/image/deployment evidence after it actually completes.

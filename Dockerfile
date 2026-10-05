@@ -17,6 +17,8 @@ RUN ./mvnw -B -DskipTests package \
 
 FROM eclipse-temurin:21-jre-jammy
 
+LABEL io.bmepilots.api.contracts="1,2"
+
 WORKDIR /app
 
 RUN apt-get update \

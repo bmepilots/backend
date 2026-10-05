@@ -10,6 +10,9 @@ spring:
       connection-init-sql: SET time_zone = '+00:00'
   flyway:
     enabled: true
+    url: ${FLYWAY_URL:${spring.datasource.url}}
+    user: ${FLYWAY_USER:${spring.datasource.username}}
+    password: ${FLYWAY_PASSWORD:${spring.datasource.password}}
   jackson:
     time-zone: UTC
   servlet:
@@ -18,6 +21,7 @@ spring:
       max-request-size: 251MB
       file-size-threshold: 0
 server:
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:none}
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${PORT:8080}
   error:

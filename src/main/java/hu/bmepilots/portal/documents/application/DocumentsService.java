@@ -54,6 +54,17 @@ public class DocumentsService {
 
   public record Detail(Post post, List<FileInfo> files, List<Comment> comments) {}
 
+  public record Upload(
+      String id, String filename, long sizeBytes, String contentType, LocalDateTime expiresAt) {}
+
+  public record Publish(
+      @NotBlank @Size(max = 180) String title,
+      @NotNull @Size(max = 100000) String description,
+      @NotNull @Size(min = 1, max = 5) List<@NotBlank @Size(max = 36) String> uploadIds) {}
+
+  private record Staged(
+      String id, String filename, long sizeBytes, String contentType, String storageKey) {}
+
   public record Change(
       @NotBlank @Size(max = 180) String title,
       @NotNull @Size(max = 100000) String description,
@@ -116,8 +127,138 @@ public class DocumentsService {
             .list());
   }
 
+  /**
+   * Serialize staging and publication per member so concurrent requests cannot exceed the quota.
+   */
+  private void lockUploader() {
+    db.sql("SELECT id FROM users WHERE id=? FOR UPDATE")
+        .param(CurrentUser.id())
+        .query(String.class)
+        .single();
+  }
+
   @Transactional
-  public Post create(String title, String description, List<MultipartFile> files) {
+  public Upload stage(List<MultipartFile> files) {
+    if (files == null || files.size() != 1) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION", "Upload one file at a time.");
+    }
+    var file = files.getFirst();
+    if (file.getSize() > DocumentStorage.MAX_FILE_BYTES) throw DocumentStorage.tooLarge();
+    lockUploader();
+    if (db.sql(
+                "SELECT COUNT(*) FROM document_uploads WHERE created_by=? AND expires_at>CURRENT_TIMESTAMP(6)")
+            .param(CurrentUser.id())
+            .query(Long.class)
+            .single()
+        >= 10) {
+      throw new ApiException(
+          HttpStatus.CONFLICT,
+          "UPLOAD_LIMIT",
+          "Finish or cancel pending uploads before adding more files.");
+    }
+    var stored = storage.save(file);
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCompletion(int status) {
+            if (status != STATUS_COMMITTED) storage.delete(stored.key());
+          }
+        });
+    String id = UUID.randomUUID().toString();
+    db.sql(
+            "INSERT INTO document_uploads(id,created_by,filename,content_type,size_bytes,storage_key,expires_at) VALUES (?,?,?,?,?,?,DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 24 HOUR))")
+        .params(
+            id,
+            CurrentUser.id(),
+            filename(file.getOriginalFilename()),
+            contentType(file.getContentType()),
+            stored.sizeBytes(),
+            stored.key())
+        .update();
+    audit.record("DOCUMENT_UPLOAD_STAGED", "DOCUMENT_UPLOAD", id);
+    return db.sql(
+            "SELECT id,filename,size_bytes,content_type,expires_at FROM document_uploads WHERE id=?")
+        .param(id)
+        .query(Upload.class)
+        .single();
+  }
+
+  @Transactional
+  public Post publish(Publish change) {
+    validateMetadata(change.title(), change.description());
+    if (change.uploadIds() == null
+        || change.uploadIds().isEmpty()
+        || change.uploadIds().size() > 5
+        || new HashSet<>(change.uploadIds()).size() != change.uploadIds().size()) {
+      throw new ApiException(
+          HttpStatus.BAD_REQUEST,
+          "VALIDATION",
+          "Attach between 1 and 5 different files to a post.");
+    }
+    lockUploader();
+    List<Staged> staged = new ArrayList<>();
+    for (String uploadId : change.uploadIds()) {
+      staged.add(
+          db.sql(
+                  "SELECT id,filename,size_bytes,content_type,storage_key FROM document_uploads WHERE id=? AND created_by=? AND expires_at>CURRENT_TIMESTAMP(6) FOR UPDATE")
+              .params(uploadId, CurrentUser.id())
+              .query(Staged.class)
+              .optional()
+              .orElseThrow(ApiException::missing));
+    }
+    String id = UUID.randomUUID().toString();
+    db.sql(
+            "INSERT INTO document_posts(id,title,description,created_by,updated_by) VALUES (?,?,?,?,?)")
+        .params(id, change.title().trim(), change.description(), CurrentUser.id(), CurrentUser.id())
+        .update();
+    for (int position = 0; position < staged.size(); position++) {
+      var file = staged.get(position);
+      if (!Files.isRegularFile(storage.path(file.storageKey()), LinkOption.NOFOLLOW_LINKS)) {
+        throw new ApiException(
+            HttpStatus.CONFLICT,
+            "UPLOAD_UNAVAILABLE",
+            "An uploaded file is unavailable. Upload it again before publishing.");
+      }
+      db.sql(
+              "INSERT INTO document_files(id,post_id,filename,content_type,size_bytes,storage_key,position) VALUES (?,?,?,?,?,?,?)")
+          .params(
+              file.id(),
+              id,
+              file.filename(),
+              file.contentType(),
+              file.sizeBytes(),
+              file.storageKey(),
+              position)
+          .update();
+      db.sql("DELETE FROM document_uploads WHERE id=?").param(file.id()).update();
+      audit.record("DOCUMENT_FILE_UPLOADED", "DOCUMENT_FILE", file.id());
+    }
+    audit.record("DOCUMENT_CREATED", "DOCUMENT", id);
+    return get(id);
+  }
+
+  @Transactional
+  public void discard(String id) {
+    lockUploader();
+    String key =
+        db.sql(
+                "SELECT storage_key FROM document_uploads WHERE id=? AND created_by=? AND expires_at>CURRENT_TIMESTAMP(6) FOR UPDATE")
+            .params(id, CurrentUser.id())
+            .query(String.class)
+            .optional()
+            .orElseThrow(ApiException::missing);
+    db.sql("DELETE FROM document_uploads WHERE id=?").param(id).update();
+    audit.record("DOCUMENT_UPLOAD_DISCARDED", "DOCUMENT_UPLOAD", id);
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            storage.delete(key);
+          }
+        });
+  }
+
+  private static void validateMetadata(String title, String description) {
     if (title == null
         || title.isBlank()
         || title.length() > 180
@@ -128,6 +269,11 @@ public class DocumentsService {
           "VALIDATION",
           "Enter a title of up to 180 characters and a description of up to 100,000 characters.");
     }
+  }
+
+  @Transactional
+  public Post create(String title, String description, List<MultipartFile> files) {
+    validateMetadata(title, description);
     if (files == null || files.isEmpty() || files.size() > 5) {
       throw new ApiException(
           HttpStatus.BAD_REQUEST, "VALIDATION", "Attach between 1 and 5 files to a post.");

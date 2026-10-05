@@ -3,7 +3,9 @@ package hu.bmepilots.portal.documents.infrastructure;
 import hu.bmepilots.portal.common.error.ApiException;
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.Instant;
 import java.util.UUID;
+import java.util.function.Predicate;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -74,6 +76,31 @@ public class DocumentStorage {
 
   public void delete(String key) {
     remove(path(key));
+  }
+
+  /** Only generated UUID objects and partial files in this private directory are eligible. */
+  public void reconcile(Instant olderThan, Predicate<String> referenced) {
+    try (var files = Files.list(root)) {
+      var iterator = files.iterator();
+      while (iterator.hasNext()) {
+        Path file = iterator.next();
+        String name = file.getFileName().toString();
+        if (!name.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\\.part)?")
+            || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) continue;
+        try {
+          if (Files.getLastModifiedTime(file, LinkOption.NOFOLLOW_LINKS)
+                  .toInstant()
+                  .isBefore(olderThan)
+              && !referenced.test(name.replaceFirst("\\.part$", ""))) remove(file);
+        } catch (NoSuchFileException ignored) {
+          // A concurrent successful discard or post deletion already removed this file.
+        }
+      }
+    } catch (IOException e) {
+      LoggerFactory.getLogger(DocumentStorage.class)
+          .warn(
+              "Document storage reconciliation failed; an operator should check storage availability.");
+    }
   }
 
   private void remove(Path file) {

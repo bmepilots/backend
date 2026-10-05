@@ -32,7 +32,7 @@ Start documentation reading here, then `docs/ARCHITECTURE.md`, `docs/API.md`, `d
 
 ### Ubuntu VM container deployment
 
-`Dockerfile` builds the packaged Spring Boot application with Java 21 and runs it as non-root UID/GID `10001`. The image sets `SERVER_ADDRESS=0.0.0.0` and listens on port 8080 inside Docker; host-run development retains the loopback default. The image healthcheck calls `/actuator/health` internally. `docker-entrypoint.sh` reads `DB_PASSWORD_FILE` and `BOOTSTRAP_ADMIN_PASSWORD_FILE` when the corresponding environment passwords are absent, then replaces the shell with Java. `MAIL_PASSWORD_FILE` is read directly by the mail provider. Secret contents are never included in the image.
+`Dockerfile` builds the packaged Spring Boot application with Java 21 and runs it as non-root UID/GID `10001`. The image sets `SERVER_ADDRESS=0.0.0.0` and listens on port 8080 inside Docker; host-run development retains the loopback default. The image healthcheck calls `/actuator/health` internally. `docker-entrypoint.sh` reads `DB_PASSWORD_FILE`, `FLYWAY_PASSWORD_FILE` and `BOOTSTRAP_ADMIN_PASSWORD_FILE` when the corresponding environment passwords are absent, then replaces the shell with Java. `MAIL_PASSWORD_FILE` is read directly by the mail provider. Secret contents are never included in the image.
 
 Use the canonical Compose stack and runbook in [`../db/deploy`](../db/deploy/README.md), which replaces the earlier unversioned deployment draft. Its base configuration publishes no host ports. The backend joins an internal API network, an internal database network and a separate egress network for Gmail IMAP. Database, document, attachment and log data persist on the mounted `/srv/bmepilots` disk. `scripts/prepare.sh` prepares storage and Linux secret permissions; `scripts/start.sh` verifies the mount and waits for service health. Backend secret files must be readable by group `10001`, and backend storage must be writable by UID `10001`.
 
@@ -64,8 +64,12 @@ Set JAVA_HOME and `DB_URL`, `DB_USER`, `DB_PASSWORD` from your private db `.env`
 | DB_USER | `bmepilots` |
 | DB_PASSWORD | Required; no working password committed |
 | DB_PASSWORD_FILE | Container-entrypoint alternative to DB_PASSWORD; readable secret file |
+| FLYWAY_URL / FLYWAY_USER / FLYWAY_PASSWORD | Optional migration connection; each falls back to the corresponding Spring datasource property |
+| FLYWAY_PASSWORD_FILE | Container-entrypoint alternative to FLYWAY_PASSWORD; use a separate private migration secret |
 | PORT | 8080; network binding follows SERVER_ADDRESS |
 | SERVER_ADDRESS | `127.0.0.1`; set to `0.0.0.0` for the container network |
+| SERVER_FORWARD_HEADERS_STRATEGY | `none`; public Compose sets `native` only with the explicit trusted gateway below |
+| SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES | Public deployment sets `172[.]30[.]27[.]2`; never enable forwarded headers with broad default proxy trust |
 | COOKIE_SECURE | false for local HTTP; true required with future HTTPS |
 | BOOTSTRAP_ADMIN_EMAIL/PASSWORD | Optional first-admin bootstrap |
 | BOOTSTRAP_ADMIN_PASSWORD_FILE | Container-entrypoint alternative to BOOTSTRAP_ADMIN_PASSWORD |
@@ -103,6 +107,7 @@ Compilation: `./mvnw -DskipTests compile`. Full tests: `pwsh -File scripts/test.
 - Session storage is in memory; restart logs users out. One backend instance only.
 - Every active member can read all imported mail; read/important flags are private to each user.
 - Members can share documents (1–5 files, up to 50 MiB each), discuss posts, add calendar entries and contribute useful links. Authors manage their own content; administrators manage all content. Knowledge articles existing at migration V5 are preserved as document posts; the old knowledge API is read-only.
+- New uploads use one private staging request per file and one JSON publication request, so five 50 MiB files do not require a 250 MiB proxy request. Unpublished references expire after 24 hours; hourly cleanup removes expired references and reconciles old orphan files. See `docs/DOCUMENTS.md` for retry and cleanup contracts.
 - No SMTP, Gmail API, external calendar synchronization, permission editor or public email verification.
 - Mail defaults to off in source configuration; this workspace has a verified local Gmail configuration. Read `docs/MAIL.md` before enabling elsewhere.
 - See STATUS for exact completed functionality and outstanding items rather than treating the original design as implemented.

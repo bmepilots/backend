@@ -6,6 +6,11 @@ if [ -z "${DB_PASSWORD:-}" ] && [ -n "${DB_PASSWORD_FILE:-}" ]; then
   export DB_PASSWORD
 fi
 
+if [ -z "${FLYWAY_PASSWORD:-}" ] && [ -n "${FLYWAY_PASSWORD_FILE:-}" ]; then
+  FLYWAY_PASSWORD="$(cat "$FLYWAY_PASSWORD_FILE")"
+  export FLYWAY_PASSWORD
+fi
+
 if [ -z "${BOOTSTRAP_ADMIN_PASSWORD:-}" ] && [ -n "${BOOTSTRAP_ADMIN_PASSWORD_FILE:-}" ]; then
   BOOTSTRAP_ADMIN_PASSWORD="$(cat "$BOOTSTRAP_ADMIN_PASSWORD_FILE")"
   export BOOTSTRAP_ADMIN_PASSWORD

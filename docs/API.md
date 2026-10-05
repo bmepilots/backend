@@ -1,6 +1,6 @@
 # REST API contract
 
-Updated: 2026-10-04.
+Updated: 2026-10-05.
 
 Base `/api/v1`. JSON request/response, UTF-8, except document creation uses multipart and file downloads use binary responses. Authentication is a cookie session. All POST/PATCH/PUT/DELETE requests, including login, registration and multipart uploads, require CSRF. Call `GET /auth/csrf`, preserve its session cookie and send `token` in the returned `headerName`. After login/logout fetch a fresh token. Errors are `application/problem+json` with `status`, `detail`, and stable `code`; no stack traces or credentials.
 
@@ -35,7 +35,10 @@ Every active member may create posts and comments. Authors may edit/delete their
 
 - GET `/documents?q=&page=0`: up to 20 posts, most recently updated first; searches title/description.
 - GET `/documents/{id}`: `{post, files, comments}`, including author IDs/names and optimistic versions.
-- POST `/documents`: multipart fields `title`, `description`, repeated `files`; 201 with the saved post. Requires 1–5 nonempty files, each at most 50 MiB (52,428,800 bytes, displayed as 50 MB). Total request limit is 251 MiB including multipart overhead. Send CSRF as a header; let the browser supply the multipart boundary.
+- POST `/documents/uploads`: multipart field `file`, exactly one nonempty file up to 50 MiB (52,428,800 bytes, displayed as 50 MB); 201 `{id, filename, sizeBytes, contentType, expiresAt}`. Staged files are private to their uploading member, expire after 24 hours and have a ten-pending-file quota per member (409 `UPLOAD_LIMIT`). `expiresAt` represents UTC. Send CSRF as a header; let the browser supply the multipart boundary.
+- DELETE `/documents/uploads/{id}`: discard one's own unexpired staging reference; 204. Missing, expired, consumed or other-owner references return 404, including for administrators.
+- POST `/documents` with JSON `{title, description, uploadIds}`: 201 saved post. Atomically publishes 1–5 distinct owned and unexpired staging references, ordered by `uploadIds`, and consumes them. A validation/storage failure creates no partial post and retains valid stages. Lost publication responses require checking the list before starting a new upload; consumed references cannot be reused.
+- POST `/documents` with legacy multipart fields `title`, `description`, repeated `files` remains supported for older clients. Requires 1–5 files of at most 50 MiB each; server request limit 251 MiB. Upstream proxies may reject large combined requests, so new clients use the staged endpoints.
 - PATCH `/documents/{id}`: `{title, description, version}`; edits metadata only, not the file set.
 - DELETE `/documents/{id}?version=N`: 204; removes the post, its comments and file references.
 - GET `/documents/{postId}/files/{fileId}/download`: authenticated forced attachment, no shared caching, verifies post/file association.
