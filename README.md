@@ -1,6 +1,6 @@
 # BME Pilots 2026 · Backend
 
-Spring Boot modular monolith for the **unofficial, private BME Professional Pilot 2026 student community**. Planned public domain: `bmepilots2026.com`. This version is local development only; cloud deployment, Cloudflare, CI/CD and production exposure are deliberately deferred.
+Spring Boot modular monolith for the **unofficial, private BME Professional Pilot 2026 student community**. Planned public domain: `bmepilots2026.com`. The container deployment is maintained in the sibling `../db/deploy` directory and targets a private Ubuntu VM. The current access mode is loopback HTTP through SSH forwarding; public HTTPS and Cloudflare are future work. See `docs/STATUS.md` for actual deployment and verification evidence.
 
 ## Repository map
 
@@ -10,7 +10,7 @@ Keep these three independent Git repositories as siblings:
 bmepilots/
   backend/   Java REST API and all Flyway application migrations
   frontend/  React/TypeScript user interface
-  db/        Docker MariaDB and local operations documentation
+  db/        Docker MariaDB, full-stack deployment and operations documentation
 ```
 
 Start documentation reading here, then `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/MAIL.md`, `docs/DOCUMENTS.md`, `docs/COMMUNITY.md`, `docs/AUDIT.md`, and `docs/STATUS.md`. Agents must read `AGENTS.md` and update documentation with every change.
@@ -30,7 +30,19 @@ Start documentation reading here, then `docs/ARCHITECTURE.md`, `docs/API.md`, `d
 4. In `../frontend`, run `npm ci` and `npm run dev`.
 5. Open `http://127.0.0.1:5173`.
 
-The API binds to `127.0.0.1:8080`. The frontend proxies `/api` to it; do not access the development server from an untrusted network. Health: `http://127.0.0.1:8080/actuator/health`.
+### Ubuntu VM container deployment
+
+`Dockerfile` builds the packaged Spring Boot application with Java 21 and runs it as non-root UID/GID `10001`. The image sets `SERVER_ADDRESS=0.0.0.0` and listens on port 8080 inside Docker; host-run development retains the loopback default. The image healthcheck calls `/actuator/health` internally. `docker-entrypoint.sh` reads `DB_PASSWORD_FILE` and `BOOTSTRAP_ADMIN_PASSWORD_FILE` when the corresponding environment passwords are absent, then replaces the shell with Java. `MAIL_PASSWORD_FILE` is read directly by the mail provider. Secret contents are never included in the image.
+
+Use the canonical Compose stack and runbook in [`../db/deploy`](../db/deploy/README.md), which replaces the earlier unversioned deployment draft. Its base configuration publishes no host ports. The backend joins an internal API network, an internal database network and a separate egress network for Gmail IMAP. Database, document, attachment and log data persist on the mounted `/srv/bmepilots` disk. `scripts/prepare.sh` prepares storage and Linux secret permissions; `scripts/start.sh` verifies the mount and waits for service health. Backend secret files must be readable by group `10001`, and backend storage must be writable by UID `10001`.
+
+The temporary `compose.loopback.yml` override publishes only the gateway at `127.0.0.1:8088` on the VM and sets `COOKIE_SECURE=false` for an SSH-forwarded HTTP preview. Database and backend ports remain unpublished. Use `COOKIE_SECURE=true` with future HTTPS and omit that preview override when publishing through a tunnel. Keep the bootstrap secret file while Compose references it; after creating and changing the administrator password, clear `BOOTSTRAP_ADMIN_EMAIL` to disable subsequent bootstrap attempts.
+
+### Continuous integration and image publication
+
+`.github/workflows/ci.yml` is configured to run Spotless verification and the full Maven test suite against a disposable MariaDB service on pull requests and pushes to `main`, then build the Docker image. A successful `main` run is configured to publish `ghcr.io/<owner>/backend:<commit-sha>` plus the moving `:main` tag using the workflow's short-lived `GITHUB_TOKEN`. Use the published digest as the immutable deployment reference; tags can move. See `docs/CI.md` for workflow and registry details. Workflow configuration is not proof of a completed GitHub run or published image; consult `docs/STATUS.md` for verified results. The workflow does not deploy to the VM.
+
+In host-run development, the API binds to `127.0.0.1:8080`. The frontend proxies `/api` to it; do not access the development server from an untrusted network. Development health: `http://127.0.0.1:8080/actuator/health`.
 
 ### Initial administrator
 
@@ -51,9 +63,12 @@ Set JAVA_HOME and `DB_URL`, `DB_USER`, `DB_PASSWORD` from your private db `.env`
 | DB_URL | `jdbc:mariadb://127.0.0.1:3307/bmepilots` |
 | DB_USER | `bmepilots` |
 | DB_PASSWORD | Required; no working password committed |
-| PORT | 8080, loopback only |
+| DB_PASSWORD_FILE | Container-entrypoint alternative to DB_PASSWORD; readable secret file |
+| PORT | 8080; network binding follows SERVER_ADDRESS |
+| SERVER_ADDRESS | `127.0.0.1`; set to `0.0.0.0` for the container network |
 | COOKIE_SECURE | false for local HTTP; true required with future HTTPS |
 | BOOTSTRAP_ADMIN_EMAIL/PASSWORD | Optional first-admin bootstrap |
+| BOOTSTRAP_ADMIN_PASSWORD_FILE | Container-entrypoint alternative to BOOTSTRAP_ADMIN_PASSWORD |
 | MAIL_ENABLED | false |
 | MAIL_USERNAME | Shared Gmail address |
 | MAIL_PASSWORD_FILE | Absolute private file path containing only the App Password |
@@ -82,7 +97,9 @@ Compilation: `./mvnw -DskipTests compile`. Full tests: `pwsh -File scripts/test.
 
 ## Limitations and future work
 
-- Local HTTP settings are not production hardened. Deployment/backup automation is not configured.
+- The VM's private HTTP preview is not public HTTPS. Cloudflare, trusted proxy configuration and automatic VM updates remain follow-up work.
+- The application and Flyway currently share a database-scoped credential. Separate runtime and migration privileges before public production use.
+- Scheduled encrypted offsite backups and restore rehearsals remain operational follow-up work; preserve the database together with both private file stores.
 - Session storage is in memory; restart logs users out. One backend instance only.
 - Every active member can read all imported mail; read/important flags are private to each user.
 - Members can share documents (1–5 files, up to 50 MiB each), discuss posts, add calendar entries and contribute useful links. Authors manage their own content; administrators manage all content. Knowledge articles existing at migration V5 are preserved as document posts; the old knowledge API is read-only.

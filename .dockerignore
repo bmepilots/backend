@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.vscode
+.secrets
+logs
+storage
+target
+*.env
+.env*
+*.log
+README.md
+AGENTS.md
+docs
