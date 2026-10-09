@@ -1,6 +1,6 @@
 # REST API contract
 
-Updated: 2026-10-05.
+Updated: 2026-10-09.
 
 Base `/api/v1`. JSON request/response, UTF-8, except document creation uses multipart and file downloads use binary responses. Authentication is a cookie session. All POST/PATCH/PUT/DELETE requests, including login, registration and multipart uploads, require CSRF. Call `GET /auth/csrf`, preserve its session cookie and send `token` in the returned `headerName`. After login/logout fetch a fresh token. Errors are `application/problem+json` with `status`, `detail`, and stable `code`; no stack traces or credentials.
 
@@ -10,12 +10,12 @@ A revoked/expired authenticated session is cleared before public auth/config rou
 - GET `/public/config`: registrationEnabled, portalName.
 - GET `/auth/csrf`: token, headerName; token is not an authentication credential.
 - POST `/auth/register`: email, displayName (2..100), password (12..128); 202 generic acknowledgement, 403 if registration closed. No auto-login.
-- POST `/auth/login`: email, password -> user view. 401 generic invalid/inactive credentials, 429 throttled.
+- POST `/auth/login`: email, password -> user view. Records `lastLoginAt` only after successful ACTIVE-account credential verification; does not increment the user's optimistic version. 401 generic invalid/inactive credentials, 429 throttled.
 - POST `/auth/logout`: CSRF-protected session logout, 204.
 - GET `/actuator/health` exists outside API base, exposes no details.
 
 ## Member
-- GET `/users/me`: id, email, displayName, status, effective role, version, createdAt.
+- GET `/users/me`: id, email, displayName, status, effective role, version, createdAt, lastLoginAt. `lastLoginAt` is a nullable timezone-less ISO timestamp representing UTC; null means no recorded successful sign-in. All user views, including login and admin list/mutation responses, have these fields. Passwords, hashes and internal auth versions are never returned.
 - PUT `/users/me/password`: currentPassword, newPassword; revokes existing sessions.
 - GET `/dashboard`: announcements (up to 3), documents (up to 4), upcomingEvents (up to 5 overlapping the next 31 days, starting today in Europe/Budapest), links (up to 4), personal unreadMailCount. The former articles field is replaced by documents.
 - GET `/announcements?page=0`: up to 20, important first. GET `/announcements/{id}`.
@@ -70,6 +70,7 @@ Calendar startsAt/endsAt use Europe/Budapest wall time with no offset or Z. An o
 - POST `/admin/registrations/{id}/approve` or `/reject`: `{version}`.
 - POST `/admin/users/{id}/suspend`, `/disable`, `/activate`: `{version}`.
 - PUT `/admin/users/{id}/roles`: `{role: "USER" | "ADMIN", version}`. Revokes target sessions.
+- PUT `/admin/users/{id}/password`: `{newPassword, version}` -> 200 updated user view. `newPassword` is required, nonblank and 12–128 characters; `version` is required, nonnull and nonnegative. ADMIN and CSRF required. Any existing account may be reset, including inactive accounts or the current administrator. Status and role remain unchanged. Increments the user's optimistic/auth versions and revokes all target sessions; self-reset therefore requires a fresh sign-in, while the acting administrator's session remains valid when resetting somebody else. Missing target returns 404; stale version returns 409 `CONFLICT`. Reload user data before a retry. Resets do not change `lastLoginAt`, send email or create recovery tokens, and there is no forced subsequent password change. Successful resets create a transactional `PASSWORD_RESET` actor/target audit entry; rejected requests create no reset event.
 - GET/PATCH `/admin/settings`: registrationEnabled, portalName, version.
 - GET `/admin/audit-log?page=0`: 50 named activity entries, newest first, with actor display name.
 - GET `/admin/audit-log?requests=true&page=0`: separate API request view with method, safe route template, response status and duration in milliseconds. Request payloads, query strings, credentials and content are not logged. See `AUDIT.md` for coverage and durability.
@@ -92,3 +93,5 @@ Mail operations:
 
 ## Concurrency and errors
 Send the last received version for optimistic writes. 409 CONFLICT means reload before retry; do not blindly overwrite. LAST_ADMIN protects the only active admin. Unauthorized and expired sessions return 401, role/CSRF errors 403, missing resources 404, validation 400. Errors do not expose whether an email exists at login. See tests for executable examples.
+
+The existing self-service password-change endpoint also returns 409 if a concurrent credential/lifecycle mutation invalidates the password snapshot being verified. A concurrent reset that completes during login password verification makes that login fail with the same generic 401, without advancing `lastLoginAt` or recording `LOGIN_SUCCEEDED`. Backend images implementing these administrator features advertise API contracts `1,2,3`; the matching frontend requires contract `3`, preventing the automatic updater from deploying it against an older backend.

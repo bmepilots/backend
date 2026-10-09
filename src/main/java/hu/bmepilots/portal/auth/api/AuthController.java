@@ -1,6 +1,5 @@
 package hu.bmepilots.portal.auth.api;
 
-import hu.bmepilots.portal.audit.application.AuditService;
 import hu.bmepilots.portal.common.error.ApiException;
 import hu.bmepilots.portal.user.application.UserService;
 import jakarta.servlet.http.*;
@@ -19,14 +18,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
   private final UserService users;
-  private final AuditService audit;
   private final Map<String, Window> attempts = new ConcurrentHashMap<>();
 
   private record Window(long start, int count) {}
 
-  public AuthController(UserService users, AuditService audit) {
+  public AuthController(UserService users) {
     this.users = users;
-    this.audit = audit;
   }
 
   @GetMapping("/csrf")
@@ -66,7 +63,6 @@ public class AuthController {
     limit("ip:" + req.getRemoteAddr(), 60);
     limit("email:" + input.email().trim().toLowerCase(Locale.ROOT), 15);
     var p = users.authenticate(input);
-    audit.recordAs(p.id(), "LOGIN_SUCCEEDED", "USER", p.id());
     if (req.getSession(false) != null) req.getSession(false).invalidate();
     req.getSession(true);
     var context = SecurityContextHolder.createEmptyContext();

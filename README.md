@@ -52,6 +52,14 @@ Subsequent normal starts use `pwsh -File scripts/dev.ps1` without `-Bootstrap`. 
 
 Registration starts **closed**. Open it at Admin → Settings. New registrations receive USER / PENDING_APPROVAL and require admin approval. Existing email registration receives the same generic response.
 
+### Administrator password recovery and login history
+
+Admin → Users lets an administrator set a new password for any existing account, including their own. Passwords must contain 12–128 characters and cannot be blank. The reset does not change the account's role or approval/suspension status. It invalidates every existing session belonging to that account; resetting your own password therefore requires signing in again. Other users' sessions continue normally. There is no email delivery, temporary-password expiry or forced-change-on-next-login workflow; communicate the chosen password privately.
+
+The user list includes the latest successful sign-in time. `lastLoginAt` is stored as UTC and displayed by the frontend in Europe/Budapest. Failed or inactive-account attempts, refreshing a page and resetting a password do not change it. V9 preserves trustworthy previous sign-ins by taking each user's latest matching `LOGIN_SUCCEEDED` audit entry; missing history remains null.
+
+The API requires the user's current optimistic `version` for a reset. Reload after a 409 conflict instead of retrying a stale password form. The transactional `PASSWORD_RESET` audit entry identifies the acting administrator and target account without containing the password or hash. See `docs/API.md`, `docs/AUDIT.md` and `docs/TESTING.md` for the full contract and security verification.
+
 ### Linux/macOS or IDE
 
 Set JAVA_HOME and `DB_URL`, `DB_USER`, `DB_PASSWORD` from your private db `.env`, then run `./mvnw spring-boot:run`. The PowerShell script is a convenience, not an application requirement. In an IDE, run `PortalApplication` with those environment variables and working directory set to this repository. Never paste environment secrets into a shared run configuration.
@@ -108,6 +116,6 @@ Compilation: `./mvnw -DskipTests compile`. Full tests: `pwsh -File scripts/test.
 - Every active member can read all imported mail; read/important flags are private to each user.
 - Members can share documents (1–5 files, up to 50 MiB each), discuss posts, add calendar entries and contribute useful links. Authors manage their own content; administrators manage all content. Knowledge articles existing at migration V5 are preserved as document posts; the old knowledge API is read-only.
 - New uploads use one private staging request per file and one JSON publication request, so five 50 MiB files do not require a 250 MiB proxy request. Unpublished references expire after 24 hours; hourly cleanup removes expired references and reconciles old orphan files. See `docs/DOCUMENTS.md` for retry and cleanup contracts.
-- No SMTP, Gmail API, external calendar synchronization, permission editor or public email verification.
+- No SMTP, Gmail API, external calendar synchronization, permission editor or public email verification. Administrator-set password recovery is supported; public self-service recovery links/tokens are not.
 - Mail defaults to off in source configuration; this workspace has a verified local Gmail configuration. Read `docs/MAIL.md` before enabling elsewhere.
 - See STATUS for exact completed functionality and outstanding items rather than treating the original design as implemented.

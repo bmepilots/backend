@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -45,7 +46,8 @@ public class UserService {
       String status,
       String role,
       long version,
-      LocalDateTime createdAt) {}
+      LocalDateTime createdAt,
+      LocalDateTime lastLoginAt) {}
 
   public record Credentials(
       String id,
@@ -60,8 +62,13 @@ public class UserService {
       @NotBlank @Size(max = 128) String currentPassword,
       @NotBlank @Size(min = 12, max = 128) String newPassword) {}
 
+  public record PasswordReset(
+      @NotBlank @Size(min = 12, max = 128) String newPassword, @NotNull @Min(0) Long version) {}
+
+  private record PasswordState(String passwordHash, long authVersion) {}
+
   private static final String VIEW =
-      "SELECT u.id,u.email,u.display_name,u.status,CASE WHEN EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id=u.id AND r.role_code='ADMIN') THEN 'ADMIN' ELSE 'USER' END role,u.version,u.created_at FROM users u";
+      "SELECT u.id,u.email,u.display_name,u.status,CASE WHEN EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id=u.id AND r.role_code='ADMIN') THEN 'ADMIN' ELSE 'USER' END role,u.version,u.created_at,u.last_login_at FROM users u";
 
   private static String normalize(String email) {
     return email.trim().toLowerCase(Locale.ROOT);
@@ -103,6 +110,9 @@ public class UserService {
     create(email, "Community admin", password, "ACTIVE", "ADMIN");
   }
 
+  // Credential transactions use current committed rows for compare-and-set writes.
+  // MariaDB can report error 1020 instead of a stale-write miss under REPEATABLE_READ.
+  @Transactional(isolation = Isolation.READ_COMMITTED)
   public PortalPrincipal authenticate(Login input) {
     var found =
         db.sql(
@@ -119,6 +129,16 @@ public class UserService {
     if (!u.status().equals("ACTIVE"))
       throw new ApiException(
           HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "Invalid credentials or inactive account.");
+    // A reset or lifecycle change during password verification must not authenticate
+    // the old credentials or update the successful-login timestamp.
+    if (db.sql(
+                "UPDATE users SET last_login_at=UTC_TIMESTAMP(6) WHERE id=? AND status='ACTIVE' AND auth_version=?")
+            .params(u.id(), u.authVersion())
+            .update()
+        != 1)
+      throw new ApiException(
+          HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "Invalid credentials or inactive account.");
+    audit.recordAs(u.id(), "LOGIN_SUCCEEDED", "USER", u.id());
     return new PortalPrincipal(
         u.id(), u.email(), u.displayName(), u.role(), u.authVersion(), System.currentTimeMillis());
   }
@@ -223,17 +243,35 @@ public class UserService {
     return get(id);
   }
 
-  @Transactional
+  @Transactional(isolation = Isolation.READ_COMMITTED)
   public void changePassword(String id, PasswordChange c) {
-    String hash =
-        db.sql("SELECT password_hash FROM users WHERE id=?").param(id).query(String.class).single();
-    if (!encoder.matches(c.currentPassword(), hash))
+    var previous =
+        db.sql("SELECT password_hash,auth_version FROM users WHERE id=?")
+            .param(id)
+            .query(PasswordState.class)
+            .optional()
+            .orElseThrow(ApiException::missing);
+    if (!encoder.matches(c.currentPassword(), previous.passwordHash()))
       throw new ApiException(
           HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH", "The current password is incorrect.");
-    db.sql(
-            "UPDATE users SET password_hash=?,auth_version=auth_version+1,version=version+1,updated_at=CURRENT_TIMESTAMP(6) WHERE id=?")
-        .params(encoder.encode(c.newPassword()), id)
-        .update();
+    if (db.sql(
+                "UPDATE users SET password_hash=?,auth_version=auth_version+1,version=version+1,updated_at=CURRENT_TIMESTAMP(6) WHERE id=? AND auth_version=?")
+            .params(encoder.encode(c.newPassword()), id, previous.authVersion())
+            .update()
+        != 1) throw ApiException.conflict();
     audit.record("PASSWORD_CHANGED", "USER", id);
+  }
+
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public View resetPassword(String id, PasswordReset input) {
+    var previous = get(id);
+    if (previous.version() != input.version()) throw ApiException.conflict();
+    if (db.sql(
+                "UPDATE users SET password_hash=?,auth_version=auth_version+1,version=version+1,updated_at=CURRENT_TIMESTAMP(6) WHERE id=? AND version=?")
+            .params(encoder.encode(input.newPassword()), id, input.version())
+            .update()
+        != 1) throw ApiException.conflict();
+    audit.record("PASSWORD_RESET", "USER", id);
+    return get(id);
   }
 }

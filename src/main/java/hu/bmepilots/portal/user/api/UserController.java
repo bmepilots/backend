@@ -69,4 +69,9 @@ public class UserController {
   Object role(@PathVariable String id, @Valid @RequestBody Role r) {
     return users.role(id, r.role(), r.version());
   }
+
+  @PutMapping("/admin/users/{id}/password")
+  Object resetPassword(@PathVariable String id, @Valid @RequestBody UserService.PasswordReset r) {
+    return users.resetPassword(id, r);
+  }
 }
