@@ -1,6 +1,6 @@
 # Mail module operations and extension
 
-Updated: 2026-10-10.
+Updated: 2026-10-12.
 
 ## Enable a real Gmail account
 Requires Gmail IMAP access and an App Password, which generally requires Google two-step verification and is subject to account restrictions. Never provide the normal Gmail password. Place the App Password alone in a private UTF-8 file outside Git with access restricted to the service account. Set MAIL_USERNAME, MAIL_PASSWORD_FILE (absolute path), and MAIL_ENABLED=true; restart the backend. The admin status page can test connectivity and enqueue a sync. Do not paste secrets into chat, source, workflow logs or browser configuration.
@@ -106,3 +106,5 @@ Implement the application `MailProvider` interface using provider-neutral Messag
 Live Gmail access was verified on 2026-10-03 through the running backend scheduler: the first successful import stored 3 messages, with no account error and no durable message failures. Verification inspected operational timestamps and counts only, without exposing message contents or credentials. Local provider fixture tests separately cover idempotence and personal state. Browser rendering of the real inbox remains unverified because browser access was denied; see STATUS.
 
 The current test suite includes partial read/important state changes and preservation across repeated imports. Frontend component tests exercise successful-open marking, manual unread and failure behavior. Test source coverage is distinct from executed verification: consult each repository's STATUS for the latest actual run.
+
+On 2026-10-12, the compatible forwarding images and V10 were deployed successfully. A TLS-verified SMTP authentication and NOOP check from the actual backend container succeeded using its mounted Gmail credential, without supplying a message or recipients. IMAP remained healthy. The live toggle remained OFF and its outbox empty. This confirms deployment and SMTP connection readiness; actual Java-adapter submission and recipient inbox delivery were deliberately not tested against community members. See STATUS for exact revisions, workflow links and backup evidence.
