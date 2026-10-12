@@ -1,6 +1,6 @@
 # Verification guide
 
-Updated: 2026-10-09. This document describes checks and test coverage; actual execution results belong in `STATUS.md`.
+Updated: 2026-10-10. This document describes checks and test coverage; actual execution results belong in `STATUS.md`.
 
 ## Dedicated real MariaDB tests
 From this repository: `pwsh -File scripts/test.ps1`. It reads the private sibling db `.env` without printing credentials, starts `db/compose.test.yml` and runs Maven verify. This creates a separate tmpfs MariaDB at 127.0.0.1:3308, database/user bmepilots_test. It never points at the persistent development volume on 3307. Tests use a real embedded HTTP server on a random port and Java HttpClient cookie jars. Test-only passwords in source apply only to this disposable localhost database.
@@ -35,6 +35,14 @@ For non-PowerShell environments: start `docker compose -f compose.test.yml up -d
 `SecurityContentIntegrationTest`, `AdminPasswordIntegrationTest`, `DocumentsIntegrationTest` and `CommunityIntegrationTest` run against real HTTP and the dedicated MariaDB. Document tests use isolated temporary file storage and synthetic byte streams; no real shared files or Gmail contents are needed. Administrator password tests use synthetic fixture accounts only and disable fixture administrators after each test to preserve other suites' last-admin assertions. The API integration suite also checks legacy knowledge category write retirement and authenticated dashboard access; inspect individual test assertions when extending these contracts.
 
 Actual run outcomes belong in STATUS. Unit tests may be run alone with `./mvnw -Dtest=ContentSafetyTest test` without Docker, but that does not replace integration verification. A successful local fixture test does not prove real Gmail connectivity.
+
+## Forwarding verification
+
+`MailForwardingIntegrationTest` uses the dedicated real MariaDB and HTTP server, a mocked incoming provider and mocked outgoing `MailDelivery`. It enables mail only in the isolated test configuration and prevents the forwarding scheduler from racing the direct dispatch assertions. It never loads the workspace Gmail secret or contacts Google. Fixtures cover admin/CSRF/validation/version checks; default-off and future-only imports; current ACTIVE selection and newly approved users; private rollback/deduplication; actual sync replay and UIDVALIDITY reset; recipient recheck; disabled generation cancellation; bounded retries; uncertain/restart recovery; and transactional safe audit data. Fixture accounts and queue rows are isolated/cleaned without changing persistent development data.
+
+`GmailSmtpMailDeliveryTest` constructs real MIME messages and injects an in-memory transport with synthetic credentials. It checks one-recipient privacy, original body and exact attachment bytes, sanitized HTML, header-injection rejection, original Reply-To/fallback and stable Message-ID, required STARTTLS/identity verification/timeouts, known connection/authentication/rejection outcomes, ambiguous DATA failures and a lost QUIT response after acceptance. Temporary RCPT rejections are modeled with Angus' actual nested `SMTPAddressFailedException` shape; see the [pinned 2.0.5 SMTPTransport source](https://github.com/eclipse-ee4j/angus-mail/blob/2.0.5/providers/smtp/src/main/java/org/eclipse/angus/mail/smtp/SMTPTransport.java).
+
+`MailForwardingMimeTest` covers incoming loop markers, automatic replies and bounce types, reliable received dates, legitimate auto-generated notices and shared Gmail alias exclusion. These fixture checks do not prove real Gmail SMTP access or recipient inbox delivery. A deployment verification must keep forwarding OFF until an administrator intentionally enables real community delivery; do not send test mail to real members without explicit authorization. Actual executed results and any outstanding checks are recorded in STATUS.
 
 ## Manual checks still required
 Browser desktop/mobile visual QA and accessibility keyboard navigation remain distinct from API tests. With an authorized browser session, check login redirect, successful-open mail read state, manual unread, five-file document upload, comments, member/admin controls, calendar month/agenda navigation and link contribution using disposable content. Do not expose credentials or real mail in screenshots/logs.

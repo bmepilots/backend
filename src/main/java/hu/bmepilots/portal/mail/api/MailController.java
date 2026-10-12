@@ -2,6 +2,7 @@ package hu.bmepilots.portal.mail.api;
 
 import hu.bmepilots.portal.common.security.CurrentUser;
 import hu.bmepilots.portal.mail.application.*;
+import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
@@ -12,10 +13,13 @@ import org.springframework.web.bind.annotation.*;
 public class MailController {
   private final MailService service;
   private final MailSyncService sync;
+  private final MailForwardingService forwarding;
 
-  public MailController(MailService service, MailSyncService sync) {
+  public MailController(
+      MailService service, MailSyncService sync, MailForwardingService forwarding) {
     this.service = service;
     this.sync = sync;
+    this.forwarding = forwarding;
   }
 
   @GetMapping("/mail/messages")
@@ -58,6 +62,16 @@ public class MailController {
   @GetMapping("/admin/mail/status")
   Object status() {
     return sync.status();
+  }
+
+  @GetMapping("/admin/mail/forwarding")
+  Object forwarding() {
+    return forwarding.status();
+  }
+
+  @PatchMapping("/admin/mail/forwarding")
+  Object forwarding(@Valid @RequestBody MailForwardingService.Change change) {
+    return forwarding.update(change);
   }
 
   @PostMapping("/admin/mail/sync")

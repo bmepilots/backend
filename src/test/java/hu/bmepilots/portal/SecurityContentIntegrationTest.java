@@ -34,6 +34,7 @@ class SecurityContentIntegrationTest {
   @Autowired hu.bmepilots.portal.mail.infrastructure.AttachmentStorage storage;
   @Autowired hu.bmepilots.portal.mail.infrastructure.EmailSanitizer sanitizer;
   @Autowired hu.bmepilots.portal.mail.application.MailService mail;
+  @Autowired hu.bmepilots.portal.mail.application.MailForwardingService forwarding;
 
   class Client {
     HttpClient http =
@@ -115,7 +116,7 @@ class SecurityContentIntegrationTest {
     Provider provider = new Provider();
     var sync =
         new hu.bmepilots.portal.mail.application.MailSyncService(
-            db, provider, storage, sanitizer, audit, transactions, true, email);
+            db, provider, storage, sanitizer, audit, forwarding, transactions, true, email);
     try {
       sync.requestSync();
       org.awaitility.Awaitility.await()

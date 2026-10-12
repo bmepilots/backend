@@ -20,6 +20,12 @@ Domain writes and their audit entries share a database transaction. Operational 
 ## Staged document activity
 Staged document uploads record `DOCUMENT_UPLOAD_STAGED` and `DOCUMENT_UPLOAD_DISCARDED` with the uploading actor. The expiry scheduler records `DOCUMENT_UPLOAD_EXPIRED` with a system actor. Publication records the existing `DOCUMENT_FILE_UPLOADED` actions in the same transaction as the post. Private upload contents and filenames are never audit payloads.
 
+## Mail forwarding activity
+
+Administrator toggles record `MAIL_FORWARDING_ENABLED` or `MAIL_FORWARDING_DISABLED` against singleton `MAIL_FORWARDING/1`, in the same transaction as settings and pending cancellation. A new message with recipients records `MAIL_FORWARDING_QUEUED` against its `MAIL` ID. Each claimed delivery records `MAIL_FORWARDING_ATTEMPTED`; completion records `MAIL_FORWARDING_SENT`, `MAIL_FORWARDING_RETRY_SCHEDULED`, `MAIL_FORWARDING_FAILED`, `MAIL_FORWARDING_UNCERTAIN` or `MAIL_FORWARDING_CANCELLED` against its opaque `MAIL_DELIVERY` outbox ID. Startup recovery records `MAIL_FORWARDING_INTERRUPTED` when it moves interrupted attempts to uncertain. These worker events use a system actor. Bulk cancellation on disabling is attributed by the toggle event; it does not create one redundant event per pending row.
+
+Queue rows retain message/user IDs, state and safe error code for investigation. No addresses, subject, original headers, SMTP exception text, password or body enter audit event payloads. The outbox's `SENT` outcome proves only SMTP acceptance; it cannot prove arrival/read in a recipient inbox. An SMTP side effect and its database completion record are not one distributed transaction: interrupted/unknown acceptance is deliberately visible as uncertain without automatic retry.
+
 ## Files and retention
 Operational logs default to ignored `logs/portal.log` (`APP_LOG_FILE` override). Rotation uses 10 MB files, 14 days of history and a 200 MB archive cap. Request metadata also appears in that log. Database audit entries currently have no automatic purge; API traffic grows this table. Define a retention/export policy before production. Backup the audit table with the rest of MariaDB; never commit logs or dumps. Log output is intentionally metadata-only, and generic exception reports include an opaque reference and exception type rather than sensitive payloads.
 

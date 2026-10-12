@@ -1,6 +1,6 @@
 # BME Pilots 2026 · Backend
 
-Spring Boot modular monolith for the **unofficial, private BME Professional Pilot 2026 student community**. Planned public domain: `bmepilots2026.com`. The container deployment is maintained in the sibling `../db/deploy` directory and targets a private Ubuntu VM. The current access mode is loopback HTTP through SSH forwarding; public HTTPS and Cloudflare are future work. See `docs/STATUS.md` for actual deployment and verification evidence.
+Spring Boot modular monolith for the **unofficial, private BME Professional Pilot 2026 student community**, hosted at `https://bmepilots2026.com`. The container deployment is maintained in the sibling `../db/deploy` directory on an Ubuntu VM behind Cloudflare Tunnel, without published host ports. Public HTTPS, compatible image updates and local backups were verified before this feature; see `docs/STATUS.md` for dated deployment evidence and which new changes still await verification.
 
 ## Repository map
 
@@ -34,9 +34,9 @@ Start documentation reading here, then `docs/ARCHITECTURE.md`, `docs/API.md`, `d
 
 `Dockerfile` builds the packaged Spring Boot application with Java 21 and runs it as non-root UID/GID `10001`. The image sets `SERVER_ADDRESS=0.0.0.0` and listens on port 8080 inside Docker; host-run development retains the loopback default. The image healthcheck calls `/actuator/health` internally. `docker-entrypoint.sh` reads `DB_PASSWORD_FILE`, `FLYWAY_PASSWORD_FILE` and `BOOTSTRAP_ADMIN_PASSWORD_FILE` when the corresponding environment passwords are absent, then replaces the shell with Java. `MAIL_PASSWORD_FILE` is read directly by the mail provider. Secret contents are never included in the image.
 
-Use the canonical Compose stack and runbook in [`../db/deploy`](../db/deploy/README.md), which replaces the earlier unversioned deployment draft. Its base configuration publishes no host ports. The backend joins an internal API network, an internal database network and a separate egress network for Gmail IMAP. Database, document, attachment and log data persist on the mounted `/srv/bmepilots` disk. `scripts/prepare.sh` prepares storage and Linux secret permissions; `scripts/start.sh` verifies the mount and waits for service health. Backend secret files must be readable by group `10001`, and backend storage must be writable by UID `10001`.
+Use the canonical Compose stack and runbook in [`../db/deploy`](../db/deploy/README.md), which replaces the earlier unversioned deployment draft. Its base configuration publishes no host ports. The backend joins an internal API network, an internal database network and a separate egress network for Gmail IMAP and SMTP. Database, document, attachment and log data persist on the mounted `/srv/bmepilots` disk. `scripts/prepare.sh` prepares storage and Linux secret permissions; `scripts/start.sh` verifies the mount and waits for service health. Backend secret files must be readable by group `10001`, and backend storage must be writable by UID `10001`.
 
-The temporary `compose.loopback.yml` override publishes only the gateway at `127.0.0.1:8088` on the VM and sets `COOKIE_SECURE=false` for an SSH-forwarded HTTP preview. Database and backend ports remain unpublished. Use `COOKIE_SECURE=true` with future HTTPS and omit that preview override when publishing through a tunnel. Keep the bootstrap secret file while Compose references it; after creating and changing the administrator password, clear `BOOTSTRAP_ADMIN_EMAIL` to disable subsequent bootstrap attempts.
+The optional `compose.loopback.yml` override is only for private HTTP previews: it publishes the gateway at VM `127.0.0.1:8088` and sets `COOKIE_SECURE=false`. The active public tunnel mode omits that override, keeps `COOKIE_SECURE=true` and trusts only the configured gateway. Database and backend ports remain unpublished. Keep the bootstrap secret file while Compose references it; after creating and changing the administrator password, clear `BOOTSTRAP_ADMIN_EMAIL` to disable subsequent bootstrap attempts.
 
 ### Continuous integration and image publication
 
@@ -60,6 +60,12 @@ The user list includes the latest successful sign-in time. `lastLoginAt` is stor
 
 The API requires the user's current optimistic `version` for a reset. Reload after a 409 conflict instead of retrying a stale password form. The transactional `PASSWORD_RESET` audit entry identifies the acting administrator and target account without containing the password or hash. See `docs/API.md`, `docs/AUDIT.md` and `docs/TESTING.md` for the full contract and security verification.
 
+### Forward shared mail to active members
+
+Admin → Email connection → Automatic forwarding can enable delivery of new shared-inbox messages to every currently ACTIVE member's registered email address. It starts OFF after Flyway V10. The recipient list is read from users for each new import, so newly approved/activated members need no mailing-list maintenance. Existing mail is not broadcast when enabling the feature. Turning it off cancels queued deliveries; one delivery already in flight may finish.
+
+Forwarding reuses `MAIL_USERNAME` and the existing `MAIL_PASSWORD_FILE` App Password with `MAIL_ENABLED=true`. No new secret or Compose environment variable is required. Outbound `smtp.gmail.com:587` with required STARTTLS must be reachable; the existing **Test connection** button tests IMAP only. Configuration availability does not prove SMTP connectivity. The admin section shows queue totals and safe failure information. See `docs/MAIL.md` for eligibility, delivery outcomes, retries, Gmail quotas and restore precautions. No live recipient email should be sent solely for a deployment smoke test.
+
 ### Linux/macOS or IDE
 
 Set JAVA_HOME and `DB_URL`, `DB_USER`, `DB_PASSWORD` from your private db `.env`, then run `./mvnw spring-boot:run`. The PowerShell script is a convenience, not an application requirement. In an IDE, run `PortalApplication` with those environment variables and working directory set to this repository. Never paste environment secrets into a shared run configuration.
@@ -78,7 +84,7 @@ Set JAVA_HOME and `DB_URL`, `DB_USER`, `DB_PASSWORD` from your private db `.env`
 | SERVER_ADDRESS | `127.0.0.1`; set to `0.0.0.0` for the container network |
 | SERVER_FORWARD_HEADERS_STRATEGY | `none`; public Compose sets `native` only with the explicit trusted gateway below |
 | SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES | Public deployment sets `172[.]30[.]27[.]2`; never enable forwarded headers with broad default proxy trust |
-| COOKIE_SECURE | false for local HTTP; true required with future HTTPS |
+| COOKIE_SECURE | false for local HTTP; true required with public HTTPS |
 | BOOTSTRAP_ADMIN_EMAIL/PASSWORD | Optional first-admin bootstrap |
 | BOOTSTRAP_ADMIN_PASSWORD_FILE | Container-entrypoint alternative to BOOTSTRAP_ADMIN_PASSWORD |
 | MAIL_ENABLED | false |
@@ -109,13 +115,13 @@ Compilation: `./mvnw -DskipTests compile`. Full tests: `pwsh -File scripts/test.
 
 ## Limitations and future work
 
-- The VM's private HTTP preview is not public HTTPS. Cloudflare, trusted proxy configuration and automatic VM updates remain follow-up work.
-- The application and Flyway currently share a database-scoped credential. Separate runtime and migration privileges before public production use.
+- The automatic VM updater promotes compatible application images after successful main CI; infrastructure and Compose changes still require a reviewed installation. Consult STATUS for the latest verified deployment rather than assuming new source changes are already running.
+- The deployed runtime and Flyway accounts use separate privileges, although both credentials remain available to the backend process at startup.
 - Scheduled encrypted offsite backups and restore rehearsals remain operational follow-up work; preserve the database together with both private file stores.
 - Session storage is in memory; restart logs users out. One backend instance only.
 - Every active member can read all imported mail; read/important flags are private to each user.
 - Members can share documents (1–5 files, up to 50 MiB each), discuss posts, add calendar entries and contribute useful links. Authors manage their own content; administrators manage all content. Knowledge articles existing at migration V5 are preserved as document posts; the old knowledge API is read-only.
 - New uploads use one private staging request per file and one JSON publication request, so five 50 MiB files do not require a 250 MiB proxy request. Unpublished references expire after 24 hours; hourly cleanup removes expired references and reconciles old orphan files. See `docs/DOCUMENTS.md` for retry and cleanup contracts.
-- No SMTP, Gmail API, external calendar synchronization, permission editor or public email verification. Administrator-set password recovery is supported; public self-service recovery links/tokens are not.
+- No Gmail API, external calendar synchronization, permission editor or public email verification. Gmail SMTP forwarding to active members is available as an administrator-controlled opt-in. Administrator-set password recovery is supported; public self-service recovery links/tokens are not.
 - Mail defaults to off in source configuration; this workspace has a verified local Gmail configuration. Read `docs/MAIL.md` before enabling elsewhere.
 - See STATUS for exact completed functionality and outstanding items rather than treating the original design as implemented.

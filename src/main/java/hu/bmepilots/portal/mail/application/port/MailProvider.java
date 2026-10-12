@@ -20,7 +20,35 @@ public interface MailProvider {
       String text,
       String html,
       List<Address> addresses,
-      List<Attachment> attachments) {}
+      List<Attachment> attachments,
+      boolean forwardable) {
+    public Message(
+        long uid,
+        String providerId,
+        String messageId,
+        String subject,
+        String senderAddress,
+        String senderName,
+        Instant receivedAt,
+        String text,
+        String html,
+        List<Address> addresses,
+        List<Attachment> attachments) {
+      this(
+          uid,
+          providerId,
+          messageId,
+          subject,
+          senderAddress,
+          senderName,
+          receivedAt,
+          text,
+          html,
+          addresses,
+          attachments,
+          true);
+    }
+  }
 
   record Failure(long uid, String code) {}
 

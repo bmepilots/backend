@@ -1,6 +1,6 @@
 # REST API contract
 
-Updated: 2026-10-09.
+Updated: 2026-10-10.
 
 Base `/api/v1`. JSON request/response, UTF-8, except document creation uses multipart and file downloads use binary responses. Authentication is a cookie session. All POST/PATCH/PUT/DELETE requests, including login, registration and multipart uploads, require CSRF. Call `GET /auth/csrf`, preserve its session cookie and send `token` in the returned `headerName`. After login/logout fetch a fresh token. Errors are `application/problem+json` with `status`, `detail`, and stable `code`; no stack traces or credentials.
 
@@ -90,6 +90,12 @@ Mail operations:
 - POST `/admin/mail/sync`: 202 accepted; 409 disabled/already running.
 - POST `/admin/mail/test-connection`: 204 if connection works, 502 otherwise.
 - POST `/admin/mail/retry`: resets durable failed-message retry budgets; scheduled sync picks them up.
+- GET `/admin/mail/forwarding`: `{enabled, available, enabledAt, version, counts: {pending, sending, sent, failed, uncertain, cancelled}, lastError}`. ADMIN only. `enabledAt` is nullable UTC and belongs to the current enabled window. `available` means mail is enabled in server configuration and its outgoing adapter can read the configured secret file; it is not a remote SMTP health check. Counts cover retained per-recipient outbox rows, not distinct incoming messages. `sent` means Gmail accepted submission, not verified inbox delivery. `lastError` is the latest retained nonnull safe error code and can refer to an earlier failure; no recipients, content or credentials are returned.
+- PATCH `/admin/mail/forwarding`: required `{enabled: boolean, version: nonnegative integer}` -> the same status object. ADMIN and CSRF required. Missing/null fields are 400, stale version 409 `CONFLICT`; enabling without configured mail returns 409 `MAIL_FORWARDING_UNAVAILABLE`. An actual toggle increments version and records a named audit event; an unchanged enabled value is an idempotent no-op after checking version. Enabling sets a fresh receive-time cutoff and never replays existing imported mail. Disabling clears the cutoff and cancels pending deliveries; an already claimed delivery may finish. Re-enabling cannot resume the previous enabled window's pending/retry backlog.
+
+Forwarding has no public/member toggle, test-send, bulk-send, manual-resend or queue-edit endpoint. `/admin/mail/retry` remains exclusively for IMAP import failures; it does not retry SMTP `FAILED` or `UNCERTAIN` deliveries. Safe forwarding error codes are `SMTP_NOT_CONFIGURED`, `DELIVERY_PREPARATION_FAILED`, `SMTP_AUTHENTICATION_FAILED`, `SMTP_CONNECTION_FAILED`, `SMTP_REJECTED`, `SMTP_RECIPIENT_REJECTED`, `SMTP_OUTCOME_UNKNOWN`, `DELIVERY_OUTCOME_UNKNOWN` and `DELIVERY_INTERRUPTED`. Clients should give unknown codes a generic fallback instead of displaying arbitrary exception text.
+
+Backend images including this forwarding contract advertise `1,2,3,4`; the corresponding frontend requires `4`. Previous endpoints remain compatible.
 
 ## Concurrency and errors
 Send the last received version for optimistic writes. 409 CONFLICT means reload before retry; do not blindly overwrite. LAST_ADMIN protects the only active admin. Unauthorized and expired sessions return 401, role/CSRF errors 403, missing resources 404, validation 400. Errors do not expose whether an email exists at login. See tests for executable examples.

@@ -24,6 +24,7 @@ public class MailSyncService {
   private final AttachmentStorage storage;
   private final EmailSanitizer sanitizer;
   private final AuditService audit;
+  private final MailForwardingService forwarding;
   private final TransactionTemplate tx;
   private final boolean enabled;
   private final String username;
@@ -36,6 +37,7 @@ public class MailSyncService {
       AttachmentStorage storage,
       EmailSanitizer sanitizer,
       AuditService audit,
+      MailForwardingService forwarding,
       PlatformTransactionManager manager,
       @Value("${portal.mail.enabled}") boolean enabled,
       @Value("${portal.mail.username}") String username) {
@@ -44,6 +46,7 @@ public class MailSyncService {
     this.storage = storage;
     this.sanitizer = sanitizer;
     this.audit = audit;
+    this.forwarding = forwarding;
     this.tx = new TransactionTemplate(manager);
     this.enabled = enabled;
     this.username = username;
@@ -220,6 +223,7 @@ public class MailSyncService {
                         keys.get(i))
                     .update();
               }
+              forwarding.enqueue(id, m);
             }
             db.sql(
                     "INSERT INTO mail_message_locations(folder_id,uid_validity,imap_uid,message_id) VALUES (?,?,?,?)")

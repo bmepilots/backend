@@ -149,7 +149,18 @@ public class GmailImapMailProvider implements MailProvider {
         content.text.toString(),
         content.html.toString(),
         addresses,
-        content.attachments);
+        content.attachments,
+        date != null && forwardable(m));
+  }
+
+  private static boolean forwardable(MimeMessage m) throws MessagingException {
+    if (m.getHeader("X-BME-Pilots-Forwarded") != null) return false;
+    String autoSubmitted = m.getHeader("Auto-Submitted", null);
+    if (autoSubmitted != null
+        && autoSubmitted.trim().toLowerCase(Locale.ROOT).startsWith("auto-replied")) return false;
+    String returnPath = m.getHeader("Return-Path", null);
+    if (returnPath != null && returnPath.trim().equals("<>")) return false;
+    return !m.isMimeType("multipart/report") && !m.isMimeType("message/delivery-status");
   }
 
   private static void add(
