@@ -64,6 +64,8 @@ The API requires the user's current optimistic `version` for a reset. Reload aft
 
 Admin → Email connection → Automatic forwarding can enable delivery of new shared-inbox messages to every currently ACTIVE member's registered email address. It starts OFF after Flyway V10. The recipient list is read from users for each new import, so newly approved/activated members need no mailing-list maintenance. Existing mail is not broadcast when enabling the feature. Turning it off cancels queued deliveries; one delivery already in flight may finish.
 
+Ordinary incoming messages sent from the shared Gmail account are eligible too. The shared account and its aliases remain excluded as recipients, and application-forwarded copies, auto-replies and bounces remain excluded as sources. If all counters stay zero, follow the empty-queue diagnostics in `docs/MAIL.md`; synchronization success does not by itself mean a message was queued.
+
 Forwarding reuses `MAIL_USERNAME` and the existing `MAIL_PASSWORD_FILE` App Password with `MAIL_ENABLED=true`. No new secret or Compose environment variable is required. Outbound `smtp.gmail.com:587` with required STARTTLS must be reachable; the existing **Test connection** button tests IMAP only. Configuration availability does not prove SMTP connectivity. The admin section shows queue totals and safe failure information. See `docs/MAIL.md` for eligibility, delivery outcomes, retries, Gmail quotas and restore precautions. No live recipient email should be sent solely for a deployment smoke test.
 
 ### Linux/macOS or IDE

@@ -43,6 +43,24 @@ class MailForwardingMimeTest {
   }
 
   @Test
+  void ordinarySharedSenderMailIsEligibleButItsForwardedCopiesAndAutomaticRepliesAreNot()
+      throws Exception {
+    for (var sender :
+        java.util.List.of(
+            "forwarding.shared.fixture@gmail.com",
+            "FORWARDINGSHAREDFIXTURE+inbox@googlemail.com")) {
+      var source = message();
+      source.setFrom(new InternetAddress(sender));
+      assertThat(forwardable(source)).isTrue();
+      source.setHeader("X-BME-Pilots-Forwarded", "1");
+      assertThat(forwardable(source)).isFalse();
+      source.removeHeader("X-BME-Pilots-Forwarded");
+      source.setHeader("Auto-Submitted", "auto-replied");
+      assertThat(forwardable(source)).isFalse();
+    }
+  }
+
+  @Test
   void legitimateAutomatedMailStillForwardsButUnknownReceivedDatesDoNotInventFreshness()
       throws Exception {
     var automated = message();

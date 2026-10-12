@@ -156,8 +156,7 @@ public class MailForwardingService {
   /** Called within the transaction which imports a brand-new message. */
   @Transactional(propagation = Propagation.MANDATORY)
   public void enqueue(String messageId, MailProvider.Message message) {
-    if (!mailEnabled || !message.forwardable() || sameMailbox(message.senderAddress(), username))
-      return;
+    if (!mailEnabled || !message.forwardable()) return;
     var s = settings(true);
     if (!s.enabled()
         || s.enabledAt() == null
@@ -177,7 +176,7 @@ public class MailForwardingService {
     if (queued > 0) audit.recordAs(null, "MAIL_FORWARDING_QUEUED", "MAIL", messageId);
   }
 
-  /** Gmail aliases of the configured mailbox must never become forwarding recipients/sources. */
+  /** Gmail aliases of the configured mailbox must never become forwarding recipients. */
   public static boolean sameMailbox(String first, String second) {
     return canonicalMailbox(first).equals(canonicalMailbox(second));
   }

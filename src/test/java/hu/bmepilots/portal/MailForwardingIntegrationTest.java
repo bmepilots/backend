@@ -35,7 +35,7 @@ import tools.jackson.databind.ObjectMapper;
       "portal.bootstrap.email=integration-admin@example.test",
       "portal.bootstrap.password=Integration-admin-password-2026",
       "portal.mail.enabled=true",
-      "portal.mail.username=forwarding-shared@example.test",
+      "portal.mail.username=forwarding.shared.fixture@gmail.com",
       "portal.mail.password-file=",
       "portal.mail.interval-ms=3600000",
       "portal.mail.forwarding.initial-delay-ms=3600000",
@@ -43,7 +43,7 @@ import tools.jackson.databind.ObjectMapper;
     })
 class MailForwardingIntegrationTest {
   private static final String PASSWORD = "Forwarding-fixture-password-2026";
-  private static final String SHARED = "forwarding-shared@example.test";
+  private static final String SHARED = "forwarding.shared.fixture@gmail.com";
   private static final String PATH = "/admin/mail/forwarding";
   private static String passwordHash;
 
@@ -179,8 +179,13 @@ class MailForwardingIntegrationTest {
   }
 
   private MailProvider.Message incoming(Instant receivedAt, String sender, boolean forwardable) {
+    return incoming(1, receivedAt, sender, forwardable);
+  }
+
+  private MailProvider.Message incoming(
+      long uid, Instant receivedAt, String sender, boolean forwardable) {
     return new MailProvider.Message(
-        1,
+        uid,
         UUID.randomUUID().toString(),
         "<original@example.test>",
         "Private fixture briefing",
@@ -300,10 +305,6 @@ class MailForwardingIntegrationTest {
                 importMessage(
                     incoming(Instant.now().minusSeconds(600), "sender@example.test", true))))
         .isEmpty();
-    assertThat(
-            recipients(
-                importMessage(incoming(Instant.now(), SHARED.toUpperCase(Locale.ROOT), true))))
-        .isEmpty();
     assertThat(recipients(importMessage(incoming(Instant.now(), "sender@example.test", false))))
         .isEmpty();
     String first = importMessage(incoming(Instant.now(), "sender@example.test", true));
@@ -416,6 +417,75 @@ class MailForwardingIntegrationTest {
                   .query(Long.class)
                   .single())
           .isEqualTo(2);
+    } finally {
+      sync.close();
+    }
+  }
+
+  @Test
+  void syncForwardsOrdinarySharedSenderMailAndAliasesWithoutReturningCopiesToTheMailbox()
+      throws Exception {
+    String alias = "FORWARDINGSHAREDFIXTURE+inbox@googlemail.com";
+    String sharedUser = user("ACTIVE", "USER", SHARED);
+    String aliasUser = user("ACTIVE", "USER", alias);
+    toggle(true);
+    var ordinary = incoming(1, Instant.now(), SHARED, true);
+    var aliasSource = incoming(2, Instant.now(), alias, true);
+    var forwardedCopy = incoming(3, Instant.now(), SHARED, false);
+    var automaticReply = incoming(4, Instant.now(), alias, false);
+    var batchMessages = List.of(ordinary, aliasSource, forwardedCopy, automaticReply);
+    MailProvider fixture = mock(MailProvider.class);
+    when(fixture.fetch(anyLong(), anyLong(), anyList()))
+        .thenReturn(new MailProvider.Batch(303, 4, batchMessages, List.of()));
+    var sync =
+        new MailSyncService(
+            db,
+            fixture,
+            storage,
+            sanitizer,
+            audit,
+            forwarding,
+            manager,
+            true,
+            accountId + "@example.test");
+    try {
+      sync.requestSync();
+      org.awaitility.Awaitility.await()
+          .atMost(Duration.ofSeconds(10))
+          .until(() -> !sync.status().running());
+      messages.addAll(
+          db.sql("SELECT id FROM mail_messages WHERE account_id=?")
+              .param(accountId)
+              .query(String.class)
+              .list());
+      assertThat(messages).hasSize(4);
+      var deliveredIds = new ArrayList<String>();
+      for (var message : batchMessages) {
+        String id =
+            db.sql("SELECT id FROM mail_messages WHERE account_id=? AND provider_message_id=?")
+                .params(accountId, message.providerId())
+                .query(String.class)
+                .single();
+        if (message.forwardable()) {
+          assertThat(recipients(id)).contains(memberId).doesNotContain(sharedUser, aliasUser);
+          deliveredIds.add(onlyDelivery(id, memberId));
+        } else {
+          assertThat(recipients(id)).isEmpty();
+        }
+      }
+      forwarding.dispatch();
+      forwarding.dispatch();
+      forwarding.dispatch();
+      assertThat(deliveredIds).allSatisfy(id -> assertThat(state(id)).isEqualTo("SENT"));
+      ArgumentCaptor<MailDelivery.Delivery> sent =
+          ArgumentCaptor.forClass(MailDelivery.Delivery.class);
+      verify(delivery, times(2)).deliver(sent.capture());
+      assertThat(sent.getAllValues())
+          .extracting(MailDelivery.Delivery::senderAddress)
+          .containsExactlyInAnyOrder(SHARED, alias);
+      assertThat(sent.getAllValues())
+          .extracting(MailDelivery.Delivery::recipient)
+          .containsOnly(email(memberId));
     } finally {
       sync.close();
     }
