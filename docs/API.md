@@ -101,3 +101,7 @@ Backend images including this forwarding contract advertise `1,2,3,4`; the corre
 Send the last received version for optimistic writes. 409 CONFLICT means reload before retry; do not blindly overwrite. LAST_ADMIN protects the only active admin. Unauthorized and expired sessions return 401, role/CSRF errors 403, missing resources 404, validation 400. Errors do not expose whether an email exists at login. See tests for executable examples.
 
 The existing self-service password-change endpoint also returns 409 if a concurrent credential/lifecycle mutation invalidates the password snapshot being verified. A concurrent reset that completes during login password verification makes that login fail with the same generic 401, without advancing `lastLoginAt` or recording `LOGIN_SUCCEEDED`. Backend images implementing these administrator features advertise API contracts `1,2,3`; the matching frontend requires contract `3`, preventing the automatic updater from deploying it against an older backend.
+
+## Exam prep (contract 5)
+
+Authenticated ACTIVE members: GET `/study/subjects`, GET `/study/progress`, POST `/study/attempts`, GET `/study/attempts/{id}`. Mutations require CSRF. Grading is server-owned; catalog responses omit solution keys. Attempts and results are owner-only, replay-safe and versioned. See `STUDY.md` for full DTOs, grading syntax, mock blueprint and error behavior. Flyway V11 persists attempts; older contracts remain supported.

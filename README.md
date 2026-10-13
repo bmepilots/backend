@@ -127,3 +127,7 @@ Compilation: `./mvnw -DskipTests compile`. Full tests: `pwsh -File scripts/test.
 - No Gmail API, external calendar synchronization, permission editor or public email verification. Gmail SMTP forwarding to active members is available as an administrator-controlled opt-in. Administrator-set password recovery is supported; public self-service recovery links/tokens are not.
 - Mail defaults to off in source configuration; this workspace has a verified local Gmail configuration. Read `docs/MAIL.md` before enabling elsewhere.
 - See STATUS for exact completed functionality and outstanding items rather than treating the original design as implemented.
+
+## Exam prep — API contract 5
+
+The new Exam prep area provides 38 original engineering exercises, an interactive circuit explorer, Learn/Practice/Mock exam flows and private saved results. Backend Flyway V11 owns study-attempt storage; Docker MariaDB and existing backups are reused. See `docs/STUDY.md` for source analysis, ownership, grading, extension and operational details. Local implementation does not imply deployment; consult STATUS for evidence.

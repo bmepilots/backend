@@ -1,0 +1,3378 @@
+{
+  "id": "basics-of-engineering",
+  "title": "Basics of (Mechanical) Engineering",
+  "version": "2026.10.13-1",
+  "lessons": [
+    {
+      "title": "Ohm law and references",
+      "formula": "U = R I; P = U I = I²R",
+      "text": "Choose a current arrow and measure the resistor voltage drop along it. A negative result means the actual direction is opposite. Use ohm, volt and ampere consistently.",
+      "trap": "A negative current is not an error. A resistor still dissipates non-negative power."
+    },
+    {
+      "title": "Equivalent resistance",
+      "formula": "Rseries = sum(R); 1/Rparallel = sum(1/R)",
+      "text": "Series elements share the same current with no branch at their joining node. Parallel elements share both electrical nodes. Redraw wires as nodes before reducing a network.",
+      "trap": "Visual proximity does not prove series or parallel. Changing the measurement terminals can change the answer."
+    },
+    {
+      "title": "Kirchhoff current law",
+      "formula": "Sum of signed currents at a node = 0",
+      "text": "Pick entering currents positive or leaving currents positive and stay consistent. In a connected network, one node equation is dependent on the others.",
+      "trap": "Writing both A and B equations for a two-node network does not create two independent equations."
+    },
+    {
+      "title": "Kirchhoff voltage law",
+      "formula": "Sum of signed voltages around a closed loop = 0",
+      "text": "Choose a loop direction. A voltage rise and a voltage drop have opposite signs. Write Ohm law for each resistor and enough independent node/loop constraints.",
+      "trap": "The ideal current source voltage is generally unknown. Do not pretend it has zero voltage."
+    },
+    {
+      "title": "Superposition",
+      "formula": "Total response = signed sum of single-source responses",
+      "text": "In a linear circuit, leave one independent source active at a time. Replace other ideal voltage sources by shorts and current sources by opens. Keep resistors and dependent sources.",
+      "trap": "Add voltage or current contributions, then calculate power. Do not add the separately calculated powers."
+    },
+    {
+      "title": "Capacitors and inductors",
+      "formula": "Q = C V; iC = C dV/dt; vL = L dI/dt",
+      "text": "Capacitors store electric-field energy; inductors store magnetic-field energy. In settled ideal DC, a capacitor is open and an inductor is short.",
+      "trap": "The steady-state simplification does not describe the switching transient."
+    },
+    {
+      "title": "Sinusoidal AC",
+      "formula": "omega = 2*pi*f; ZC = 1/(j*omega*C); ZL = j*omega*L",
+      "text": "Resistor voltage and current are in phase. Capacitor current leads its voltage by 90 degrees; inductor current lags its voltage by 90 degrees. For a sine wave, RMS = peak/sqrt(2).",
+      "trap": "Reactance magnitude is positive, while capacitor impedance has a negative imaginary part. The sine-wave RMS conversion is not universal."
+    },
+    {
+      "title": "Thevenin and Norton",
+      "formula": "VTh = Voc; IN = Isc; RN = RTh; VTh = IN RTh",
+      "text": "A linear two-terminal network has a voltage-source/series-resistance or current-source/parallel-resistance equivalent. These reproduce terminal behavior; they do not reproduce every internal branch.",
+      "trap": "Disconnect the load when finding the equivalent. Keep dependent sources active; use a test source when needed. This section is theory-focused for the reported exam."
+    }
+  ],
+  "exercises": [
+    {
+      "id": "r-series",
+      "title": "A three-resistor chain",
+      "topic": "Resistance",
+      "difficulty": "Foundation",
+      "prompt": "Find the equivalent resistance measured between terminals A and B. All resistors are ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 80,
+            "y": 190
+          },
+          {
+            "id": "N1",
+            "x": 280,
+            "y": 190
+          },
+          {
+            "id": "N2",
+            "x": 480,
+            "y": 190
+          },
+          {
+            "id": "B",
+            "x": 680,
+            "y": 190
+          }
+        ],
+        "parts": [
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "N1",
+            "value": 120,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N1",
+            "to": "N2",
+            "value": 180,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "N2",
+            "to": "B",
+            "value": 330,
+            "unit": "ohm"
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "Req",
+          "label": "Equivalent resistance",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "630.0000000000003",
+          "explanation": "R1 + R2 + R3 = 630 ohm."
+        }
+      ],
+      "steps": [
+        "Identify nodes joined by ideal wires before combining components.",
+        "R1 + R2 + R3",
+        "A 1 A test current into A and out of B gives 630 V between the terminals. R = V / I."
+      ],
+      "hint": "There is only one current path.",
+      "constants": {}
+    },
+    {
+      "id": "r-parallel",
+      "title": "Three parallel paths",
+      "topic": "Resistance",
+      "difficulty": "Foundation",
+      "prompt": "Find the equivalent resistance measured between terminals A and B. All resistors are ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "id": "N1",
+            "x": 350,
+            "y": 80
+          },
+          {
+            "id": "N2",
+            "x": 640,
+            "y": 80
+          },
+          {
+            "id": "B",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "N3",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "N4",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 120,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N1",
+            "to": "N3",
+            "value": 240,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "N2",
+            "to": "N4",
+            "value": 360,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "N1",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "N1",
+            "to": "N2",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "N3",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W4",
+            "kind": "wire",
+            "from": "N3",
+            "to": "N4",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "Req",
+          "label": "Equivalent resistance",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "65.45454545454545",
+          "explanation": "1 / (1/R1 + 1/R2 + 1/R3) = 65.4545 ohm."
+        }
+      ],
+      "steps": [
+        "Identify nodes joined by ideal wires before combining components.",
+        "1 / (1/R1 + 1/R2 + 1/R3)",
+        "A 1 A test current into A and out of B gives 65.4545 V between the terminals. R = V / I."
+      ],
+      "hint": "All three resistors share the same two electrical nodes.",
+      "constants": {}
+    },
+    {
+      "id": "r-nested",
+      "title": "A split after a series resistor",
+      "topic": "Resistance",
+      "difficulty": "Developing",
+      "prompt": "Find the equivalent resistance measured between terminals A and B. All resistors are ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "id": "N",
+            "x": 350,
+            "y": 80
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 80
+          },
+          {
+            "id": "B",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "E",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "N",
+            "value": 150,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "N",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N",
+            "to": "D",
+            "value": 300,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "C",
+            "to": "E",
+            "value": 600,
+            "unit": "ohm"
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "D",
+            "to": "E",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "Req",
+          "label": "Equivalent resistance",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "350.0",
+          "explanation": "R1 + R2*R3/(R2+R3) = 350 ohm."
+        }
+      ],
+      "steps": [
+        "Identify nodes joined by ideal wires before combining components.",
+        "R1 + R2*R3/(R2+R3)",
+        "A 1 A test current into A and out of B gives 350 V between the terminals. R = V / I."
+      ],
+      "hint": "Reduce the parallel pair first.",
+      "constants": {}
+    },
+    {
+      "id": "r-two-strings",
+      "title": "Parallel resistor strings",
+      "topic": "Resistance",
+      "difficulty": "Developing",
+      "prompt": "Find the equivalent resistance measured between terminals A and E. All resistors are ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "id": "N",
+            "x": 350,
+            "y": 80
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 80
+          },
+          {
+            "id": "B",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "E",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "N",
+            "value": 100,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N",
+            "to": "C",
+            "value": 200,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "C",
+            "to": "E",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 400,
+            "unit": "ohm"
+          },
+          {
+            "id": "R4",
+            "kind": "resistor",
+            "from": "B",
+            "to": "D",
+            "value": 200,
+            "unit": "ohm"
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "D",
+            "to": "E",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "Req",
+          "label": "Equivalent resistance",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "200.0",
+          "explanation": "(R1+R2)*(R3+R4)/(R1+R2+R3+R4) = 200 ohm."
+        }
+      ],
+      "steps": [
+        "Identify nodes joined by ideal wires before combining components.",
+        "(R1+R2)*(R3+R4)/(R1+R2+R3+R4)",
+        "A 1 A test current into A and out of E gives 200 V between the terminals. R = V / I."
+      ],
+      "hint": "The terminal E joins two complete series paths.",
+      "constants": {}
+    },
+    {
+      "id": "r-ladder",
+      "title": "Two-stage ladder",
+      "topic": "Resistance",
+      "difficulty": "Developing",
+      "prompt": "Find the equivalent resistance measured between terminals A and B. All resistors are ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "id": "N",
+            "x": 350,
+            "y": 80
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 80
+          },
+          {
+            "id": "B",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "E",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "N",
+            "value": 100,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N",
+            "to": "C",
+            "value": 150,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "C",
+            "to": "E",
+            "value": 450,
+            "unit": "ohm"
+          },
+          {
+            "id": "R4",
+            "kind": "resistor",
+            "from": "N",
+            "to": "D",
+            "value": 300,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "D",
+            "to": "E",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "Req",
+          "label": "Equivalent resistance",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "300.0",
+          "explanation": "R1 + R4*(R2+R3)/(R4+R2+R3) = 300 ohm."
+        }
+      ],
+      "steps": [
+        "Identify nodes joined by ideal wires before combining components.",
+        "R1 + R4*(R2+R3)/(R4+R2+R3)",
+        "A 1 A test current into A and out of B gives 300 V between the terminals. R = V / I."
+      ],
+      "hint": "Work from the far end of the ladder.",
+      "constants": {}
+    },
+    {
+      "id": "r-triangle",
+      "title": "A direct path and a detour",
+      "topic": "Resistance",
+      "difficulty": "Developing",
+      "prompt": "Find the equivalent resistance measured between terminals A and B. All resistors are ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 90,
+            "y": 300
+          },
+          {
+            "id": "N",
+            "x": 370,
+            "y": 70
+          },
+          {
+            "id": "B",
+            "x": 650,
+            "y": 300
+          }
+        ],
+        "parts": [
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "N",
+            "value": 220,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N",
+            "to": "B",
+            "value": 330,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 550,
+            "unit": "ohm"
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "Req",
+          "label": "Equivalent resistance",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "275.0",
+          "explanation": "R3*(R1+R2)/(R3+R1+R2) = 275 ohm."
+        }
+      ],
+      "steps": [
+        "Identify nodes joined by ideal wires before combining components.",
+        "R3*(R1+R2)/(R3+R1+R2)",
+        "A 1 A test current into A and out of B gives 275 V between the terminals. R = V / I."
+      ],
+      "hint": "One branch contains two resistors, the other one.",
+      "constants": {}
+    },
+    {
+      "id": "r-port",
+      "title": "Move the measurement terminals",
+      "topic": "Resistance",
+      "difficulty": "Challenge",
+      "prompt": "Find the equivalent resistance measured between terminals C and B. All resistors are ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "id": "N",
+            "x": 350,
+            "y": 80
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 80
+          },
+          {
+            "id": "B",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "E",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "N",
+            "value": 100,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N",
+            "to": "C",
+            "value": 150,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "C",
+            "to": "E",
+            "value": 450,
+            "unit": "ohm"
+          },
+          {
+            "id": "R4",
+            "kind": "resistor",
+            "from": "N",
+            "to": "D",
+            "value": 300,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "D",
+            "to": "E",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "Req",
+          "label": "Equivalent resistance",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "225.0",
+          "explanation": "R3*(R2+R4)/(R3+R2+R4); R1 ends at an open terminal and carries no current = 225 ohm."
+        }
+      ],
+      "steps": [
+        "Identify nodes joined by ideal wires before combining components.",
+        "R3*(R2+R4)/(R3+R2+R4); R1 ends at an open terminal and carries no current",
+        "A 1 A test current into C and out of B gives 225 V between the terminals. R = V / I."
+      ],
+      "hint": "Terminal A is now open. A dangling branch does not carry test current.",
+      "constants": {}
+    },
+    {
+      "id": "r-bridge",
+      "title": "A balanced bridge",
+      "topic": "Resistance",
+      "difficulty": "Challenge",
+      "prompt": "Find the equivalent resistance measured between terminals A and B. All resistors are ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 80,
+            "y": 200
+          },
+          {
+            "id": "N",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "M",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 640,
+            "y": 200
+          }
+        ],
+        "parts": [
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "N",
+            "value": 100,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N",
+            "to": "B",
+            "value": 200,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "A",
+            "to": "M",
+            "value": 150,
+            "unit": "ohm"
+          },
+          {
+            "id": "R4",
+            "kind": "resistor",
+            "from": "M",
+            "to": "B",
+            "value": 300,
+            "unit": "ohm"
+          },
+          {
+            "id": "R5",
+            "kind": "resistor",
+            "from": "N",
+            "to": "M",
+            "value": 470,
+            "unit": "ohm"
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "Req",
+          "label": "Equivalent resistance",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "180.0",
+          "explanation": "R1/R2 = R3/R4, so N and M have equal potential; (R1+R2) || (R3+R4) = 180 ohm."
+        }
+      ],
+      "steps": [
+        "Identify nodes joined by ideal wires before combining components.",
+        "R1/R2 = R3/R4, so N and M have equal potential; (R1+R2) || (R3+R4)",
+        "A 1 A test current into A and out of B gives 180 V between the terminals. R = V / I."
+      ],
+      "hint": "Check the two divider ratios before trying to reduce the central resistor.",
+      "constants": {}
+    },
+    {
+      "id": "dc-divider",
+      "title": "Loaded voltage divider",
+      "topic": "Ohm and power",
+      "difficulty": "Developing",
+      "prompt": "Find the output voltage Uab, current in R1 (S to A), and power dissipated by R1. V1 = 24 V.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 24,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 120,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 240,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "C",
+            "to": "D",
+            "value": 240,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "U",
+          "label": "Uab",
+          "kind": "numeric",
+          "unit": "V",
+          "options": [],
+          "expected": "12.0",
+          "explanation": "The load R3 is in parallel with R2."
+        },
+        {
+          "id": "I",
+          "label": "R1 current, S to A",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.1",
+          "explanation": "I1 = (V1 - Uab) / R1."
+        },
+        {
+          "id": "P",
+          "label": "R1 power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "1.2000000000000002",
+          "explanation": "P1 = I1² R1. Power dissipated by a resistor is non-negative."
+        }
+      ],
+      "steps": [
+        "Rload = R2 || R3 = 120 ohm.",
+        "Uab = V1 * Rload / (R1 + Rload) = 12 V.",
+        "I1 = 0.1 A; P1 = 1.2 W."
+      ],
+      "hint": "A loaded divider uses the parallel combination of the lower resistor and load.",
+      "constants": {}
+    },
+    {
+      "id": "dc-supply",
+      "title": "Resistor power budget",
+      "topic": "Ohm and power",
+      "difficulty": "Developing",
+      "prompt": "Find the output voltage Uab, current in R1 (S to A), and power dissipated by R1. V1 = 12 V.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 12,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 60,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 180,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "C",
+            "to": "D",
+            "value": 360,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "U",
+          "label": "Uab",
+          "kind": "numeric",
+          "unit": "V",
+          "options": [],
+          "expected": "8.0",
+          "explanation": "The load R3 is in parallel with R2."
+        },
+        {
+          "id": "I",
+          "label": "R1 current, S to A",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.06666666666666667",
+          "explanation": "I1 = (V1 - Uab) / R1."
+        },
+        {
+          "id": "P",
+          "label": "R1 power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "0.26666666666666666",
+          "explanation": "P1 = I1² R1. Power dissipated by a resistor is non-negative."
+        }
+      ],
+      "steps": [
+        "Rload = R2 || R3 = 120 ohm.",
+        "Uab = V1 * Rload / (R1 + Rload) = 8 V.",
+        "I1 = 0.0666667 A; P1 = 0.266667 W."
+      ],
+      "hint": "A loaded divider uses the parallel combination of the lower resistor and load.",
+      "constants": {}
+    },
+    {
+      "id": "dc-reverse",
+      "title": "A negative current is meaningful",
+      "topic": "Ohm and power",
+      "difficulty": "Foundation",
+      "prompt": "Calculate current in R1 using the reference B to A, and voltage V(B) - V(A).",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 130,
+            "y": 80
+          },
+          {
+            "id": "B",
+            "x": 610,
+            "y": 80
+          },
+          {
+            "id": "C",
+            "x": 610,
+            "y": 330
+          },
+          {
+            "id": "G",
+            "x": 130,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "A",
+            "to": "G",
+            "value": 9,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 300,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "B",
+            "to": "C",
+            "value": 600,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "C",
+            "to": "G",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "I",
+          "label": "R1 current, B to A",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "-0.01",
+          "explanation": "The actual current runs from A to B, opposite to the requested reference."
+        },
+        {
+          "id": "U",
+          "label": "V(B) - V(A)",
+          "kind": "numeric",
+          "unit": "V",
+          "options": [],
+          "expected": "-3",
+          "explanation": "The requested voltage reference is opposite to the drop along the actual current."
+        }
+      ],
+      "steps": [
+        "Total resistance is 900 ohm, so the physical current is 9/900 = 0.01 A from A to B.",
+        "Reversing a reference changes the sign: I = -0.01 A and U = -3 V."
+      ],
+      "hint": "Read the requested direction before calculating.",
+      "constants": {}
+    },
+    {
+      "id": "dc-current-divider",
+      "title": "Sharing a current source",
+      "topic": "Ohm and power",
+      "difficulty": "Foundation",
+      "prompt": "Find currents through R1 and R2 from the upper rail to the lower rail, and the voltage between the rails.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "J1",
+            "kind": "current",
+            "from": "G",
+            "to": "S",
+            "value": 0.03,
+            "unit": "A"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "S",
+            "to": "A",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 200,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "C",
+            "to": "D",
+            "value": 400,
+            "unit": "ohm"
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W4",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "I1",
+          "label": "R1 current",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.02",
+          "explanation": "Current divides inversely with resistance."
+        },
+        {
+          "id": "I2",
+          "label": "R2 current",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.01",
+          "explanation": "I2 = J1 * R1 / (R1 + R2)."
+        },
+        {
+          "id": "U",
+          "label": "Upper rail voltage",
+          "kind": "numeric",
+          "unit": "V",
+          "options": [],
+          "expected": "4",
+          "explanation": "U = I1 * R1 = I2 * R2."
+        }
+      ],
+      "steps": [
+        "I1 = 0.03 * 400 / 600 = 0.02 A.",
+        "I2 = 0.03 * 200 / 600 = 0.01 A.",
+        "Both branches have 4 V across them; 0.02 + 0.01 = 0.03 A."
+      ],
+      "hint": "The smaller resistance carries the larger current.",
+      "constants": {}
+    },
+    {
+      "id": "eq-two-mesh",
+      "title": "Write the complete equation set",
+      "topic": "Equations",
+      "difficulty": "Challenge",
+      "prompt": "Define I1 from S through R1 and R2 toward A; I2 from A through R3 and R5 to B; I3 from C through R4 to D. U1…U5 are resistor drops along those currents. Vs is the voltage of V1. Write five Ohm laws, KCL at A and B, and the two stated KVL loops. Use * for multiplication.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "N",
+            "x": 270,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 470,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 680,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 340
+          },
+          {
+            "id": "B",
+            "x": 470,
+            "y": 340
+          },
+          {
+            "id": "D",
+            "x": 680,
+            "y": 340
+          },
+          {
+            "id": "M",
+            "x": 470,
+            "y": 200
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 24,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "N",
+            "value": 100,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "N",
+            "to": "A",
+            "value": 200,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "A",
+            "to": "M",
+            "value": 150,
+            "unit": "ohm"
+          },
+          {
+            "id": "R5",
+            "kind": "resistor",
+            "from": "M",
+            "to": "B",
+            "value": 250,
+            "unit": "ohm"
+          },
+          {
+            "id": "R4",
+            "kind": "resistor",
+            "from": "C",
+            "to": "D",
+            "value": 600,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "ohm1",
+          "label": "Ohm law for R1",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U1=R1*I1",
+          "explanation": "U1 is measured along I1; use the passive sign convention."
+        },
+        {
+          "id": "ohm2",
+          "label": "Ohm law for R2",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U2=R2*I1",
+          "explanation": "U2 is measured along I1; use the passive sign convention."
+        },
+        {
+          "id": "ohm3",
+          "label": "Ohm law for R3",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U3=R3*I2",
+          "explanation": "U3 is measured along I2; use the passive sign convention."
+        },
+        {
+          "id": "ohm4",
+          "label": "Ohm law for R4",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U4=R4*I3",
+          "explanation": "U4 is measured along I3; use the passive sign convention."
+        },
+        {
+          "id": "ohm5",
+          "label": "Ohm law for R5",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U5=R5*I2",
+          "explanation": "U5 is measured along I2; use the passive sign convention."
+        },
+        {
+          "id": "kcla",
+          "label": "KCL at A",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "I1-I2-I3=0",
+          "explanation": "I1 enters A; I2 and I3 leave."
+        },
+        {
+          "id": "kclb",
+          "label": "KCL at B",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "-I1+I2+I3=0",
+          "explanation": "This is the negative of the A equation, not an additional independent constraint."
+        },
+        {
+          "id": "kvl1",
+          "label": "KVL: source and middle branch",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "Vs-U1-U2-U3-U5=0",
+          "explanation": "The voltage rise of the source equals the drops along the left/middle loop."
+        },
+        {
+          "id": "kvl2",
+          "label": "KVL: middle and right branches",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U3+U5-U4=0",
+          "explanation": "Both paths join A and B, so their total voltage drops agree."
+        }
+      ],
+      "steps": [
+        "Each resistor contributes U = R*I using its branch current.",
+        "At A: I1 = I2 + I3. At B the same conservation law has the opposite sign.",
+        "Left loop: Vs = U1 + U2 + U3 + U5. Right loop: U3 + U5 = U4.",
+        "There are two independent meshes; writing KCL for both essential nodes does not give two independent equations."
+      ],
+      "hint": "Do not give R1 and R2 different branch currents: no current leaves their joining node.",
+      "constants": {
+        "R1": 100,
+        "R2": 200,
+        "R3": 150,
+        "R4": 600,
+        "R5": 250,
+        "Vs": 24
+      }
+    },
+    {
+      "id": "eq-node",
+      "title": "One node, three branches",
+      "topic": "Equations",
+      "difficulty": "Foundation",
+      "prompt": "I1 runs S to A, I2 runs A to B and I3 runs C to D. U1, U2 and U3 are drops along those currents. Vs is V1. Write the requested relations.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 18,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 120,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 240,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "C",
+            "to": "D",
+            "value": 360,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "kcl",
+          "label": "KCL at A",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "I1-I2-I3=0",
+          "explanation": "One current enters and two leave."
+        },
+        {
+          "id": "loop",
+          "label": "KVL through R1 and R2",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "Vs-U1-U2=0",
+          "explanation": "Follow the source rise, then both resistor drops."
+        },
+        {
+          "id": "parallel",
+          "label": "Equal parallel voltages",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U2-U3=0",
+          "explanation": "R2 and R3 connect the same two electrical nodes."
+        }
+      ],
+      "steps": [
+        "KCL: I1 - I2 - I3 = 0.",
+        "KVL: Vs - U1 - U2 = 0.",
+        "The lower branches are parallel, so U2 = U3."
+      ],
+      "hint": "You may rearrange or multiply a complete equation by a non-zero constant.",
+      "constants": {
+        "Vs": 18
+      }
+    },
+    {
+      "id": "eq-nodal",
+      "title": "Build a nodal equation",
+      "topic": "Equations",
+      "difficulty": "Developing",
+      "prompt": "Let U be the voltage at A relative to B; Vs is V1. Write KCL at A entirely in U, Vs and resistor values. Then express the R2 current I2 from A to B.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 18,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 120,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 240,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "C",
+            "to": "D",
+            "value": 360,
+            "unit": "ohm"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "node",
+          "label": "Nodal KCL",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "(U-Vs)/R1+U/R2+U/R3=0",
+          "explanation": "Sum currents leaving A: (U - Vs)/R1, U/R2 and U/R3."
+        },
+        {
+          "id": "ohm",
+          "label": "R2 current",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "I2=U/R2",
+          "explanation": "The bottom of R2 is the reference node."
+        }
+      ],
+      "steps": [
+        "Translate each outgoing current into a voltage difference divided by resistance.",
+        "(U - Vs)/120 + U/240 + U/360 = 0.",
+        "Once U is known, I2 = U/240."
+      ],
+      "hint": "Choose all branch currents leaving the node, even if one result becomes negative.",
+      "constants": {
+        "R1": 120,
+        "R2": 240,
+        "R3": 360,
+        "Vs": 18
+      }
+    },
+    {
+      "id": "eq-source",
+      "title": "A current-source constraint",
+      "topic": "Equations",
+      "difficulty": "Developing",
+      "prompt": "Js denotes J1. I1 and I2 run down R1 and R2. U is the upper-rail voltage relative to the lower rail. Write KCL, both Ohm laws, and a voltage-only node equation.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "J1",
+            "kind": "current",
+            "from": "G",
+            "to": "S",
+            "value": 0.04,
+            "unit": "A"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "S",
+            "to": "A",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 300,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "C",
+            "to": "D",
+            "value": 600,
+            "unit": "ohm"
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W4",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "kcl",
+          "label": "KCL at the upper rail",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "Js-I1-I2=0",
+          "explanation": "The current source injects Js into the upper rail."
+        },
+        {
+          "id": "r1",
+          "label": "Ohm law for R1",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U=R1*I1",
+          "explanation": "R1 shares the rail voltage U."
+        },
+        {
+          "id": "r2",
+          "label": "Ohm law for R2",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U=R2*I2",
+          "explanation": "R2 shares the same rail voltage."
+        },
+        {
+          "id": "node",
+          "label": "Voltage-only KCL",
+          "kind": "equation",
+          "unit": "",
+          "options": [],
+          "expected": "U/R1+U/R2-Js=0",
+          "explanation": "Replace the two resistor currents using Ohm law."
+        }
+      ],
+      "steps": [
+        "Js = I1 + I2.",
+        "U = 300*I1 = 600*I2.",
+        "U/300 + U/600 = Js."
+      ],
+      "hint": "An ideal current source fixes current; its voltage is determined by the network.",
+      "constants": {
+        "R1": 300,
+        "R2": 600,
+        "Js": 0.04
+      }
+    },
+    {
+      "id": "sp-aiding",
+      "title": "Voltage and current cooperate",
+      "topic": "Superposition",
+      "difficulty": "Developing",
+      "prompt": "Use superposition to find current in R2, referenced from A to B, then its total power. Use the source selector to inspect each reduced circuit. All sources are independent and ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 12,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 100,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 200,
+            "unit": "ohm"
+          },
+          {
+            "id": "J1",
+            "kind": "current",
+            "from": "D",
+            "to": "C",
+            "value": 0.03,
+            "unit": "A"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "V1",
+          "label": "R2 current: V1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.04",
+          "explanation": "Keep V1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "J1",
+          "label": "R2 current: J1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.01",
+          "explanation": "Keep J1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "total",
+          "label": "R2 total current",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.05",
+          "explanation": "Add the signed contributions; do not add their magnitudes."
+        },
+        {
+          "id": "power",
+          "label": "R2 total power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "0.5000000000000001",
+          "explanation": "Compute power from the total current: P = I_total² R. Individual source powers cannot be superposed."
+        }
+      ],
+      "steps": [
+        "V1 alone: open J1. R1 and R2 are in series, so the downward R2 current is V1/(R1+R2).",
+        "J1 alone: short V1. R1 and R2 are parallel, so the R2 contribution has magnitude J1*R1/(R1+R2). Its sign is positive for injection into the upper node and negative for extraction.",
+        "With V1 alone, V(A) - V(B) = 8 V, so I = 0.04 A.",
+        "With J1 alone, V(A) - V(B) = 2 V, so I = 0.01 A.",
+        "I_total = (0.04) + (0.01) = 0.05 A.",
+        "P = (0.05)² * 200 = 0.5 W."
+      ],
+      "hint": "For V1 alone use a divider; for J1 alone, R1 and R2 are parallel.",
+      "constants": {}
+    },
+    {
+      "id": "sp-opposing",
+      "title": "An opposing current source",
+      "topic": "Superposition",
+      "difficulty": "Developing",
+      "prompt": "Use superposition to find current in R2, referenced from A to B, then its total power. Use the source selector to inspect each reduced circuit. All sources are independent and ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 12,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 100,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 200,
+            "unit": "ohm"
+          },
+          {
+            "id": "J1",
+            "kind": "current",
+            "from": "C",
+            "to": "D",
+            "value": 0.09,
+            "unit": "A"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "V1",
+          "label": "R2 current: V1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.04",
+          "explanation": "Keep V1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "J1",
+          "label": "R2 current: J1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "-0.03",
+          "explanation": "Keep J1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "total",
+          "label": "R2 total current",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.01",
+          "explanation": "Add the signed contributions; do not add their magnitudes."
+        },
+        {
+          "id": "power",
+          "label": "R2 total power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "0.02",
+          "explanation": "Compute power from the total current: P = I_total² R. Individual source powers cannot be superposed."
+        }
+      ],
+      "steps": [
+        "V1 alone: open J1. R1 and R2 are in series, so the downward R2 current is V1/(R1+R2).",
+        "J1 alone: short V1. R1 and R2 are parallel, so the R2 contribution has magnitude J1*R1/(R1+R2). Its sign is positive for injection into the upper node and negative for extraction.",
+        "With V1 alone, V(A) - V(B) = 8 V, so I = 0.04 A.",
+        "With J1 alone, V(A) - V(B) = -6 V, so I = -0.03 A.",
+        "I_total = (0.04) + (-0.03) = 0.01 A.",
+        "P = (0.01)² * 200 = 0.02 W."
+      ],
+      "hint": "The current-source contribution is negative in the requested downward reference.",
+      "constants": {}
+    },
+    {
+      "id": "sp-reversal",
+      "title": "When the total current reverses",
+      "topic": "Superposition",
+      "difficulty": "Challenge",
+      "prompt": "Use superposition to find current in R2, referenced from A to B, then its total power. Use the source selector to inspect each reduced circuit. All sources are independent and ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 9,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 300,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 600,
+            "unit": "ohm"
+          },
+          {
+            "id": "J1",
+            "kind": "current",
+            "from": "C",
+            "to": "D",
+            "value": 0.06,
+            "unit": "A"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "V1",
+          "label": "R2 current: V1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.010000000000000002",
+          "explanation": "Keep V1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "J1",
+          "label": "R2 current: J1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "-0.02",
+          "explanation": "Keep J1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "total",
+          "label": "R2 total current",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "-0.009999999999999998",
+          "explanation": "Add the signed contributions; do not add their magnitudes."
+        },
+        {
+          "id": "power",
+          "label": "R2 total power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "0.05999999999999998",
+          "explanation": "Compute power from the total current: P = I_total² R. Individual source powers cannot be superposed."
+        }
+      ],
+      "steps": [
+        "V1 alone: open J1. R1 and R2 are in series, so the downward R2 current is V1/(R1+R2).",
+        "J1 alone: short V1. R1 and R2 are parallel, so the R2 contribution has magnitude J1*R1/(R1+R2). Its sign is positive for injection into the upper node and negative for extraction.",
+        "With V1 alone, V(A) - V(B) = 6 V, so I = 0.01 A.",
+        "With J1 alone, V(A) - V(B) = -12 V, so I = -0.02 A.",
+        "I_total = (0.01) + (-0.02) = -0.01 A.",
+        "P = (-0.01)² * 600 = 0.06 W."
+      ],
+      "hint": "A negative answer is valid. Keep the sign through the final sum.",
+      "constants": {}
+    },
+    {
+      "id": "sp-two-voltage",
+      "title": "Two voltage sources, one load",
+      "topic": "Superposition",
+      "difficulty": "Challenge",
+      "prompt": "Use superposition to find current in R2, referenced from A to B, then its total power. Use the source selector to inspect each reduced circuit. All sources are independent and ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "S",
+            "to": "G",
+            "value": 18,
+            "unit": "V"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 120,
+            "unit": "ohm"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 240,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "A",
+            "to": "C",
+            "value": 360,
+            "unit": "ohm"
+          },
+          {
+            "id": "V2",
+            "kind": "voltage",
+            "from": "C",
+            "to": "D",
+            "value": 6,
+            "unit": "V"
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "V1",
+          "label": "R2 current: V1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.0409090909090909",
+          "explanation": "Keep V1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "V2",
+          "label": "R2 current: V2 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.004545454545454545",
+          "explanation": "Keep V2 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "total",
+          "label": "R2 total current",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.04545454545454544",
+          "explanation": "Add the signed contributions; do not add their magnitudes."
+        },
+        {
+          "id": "power",
+          "label": "R2 total power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "0.495867768595041",
+          "explanation": "Compute power from the total current: P = I_total² R. Individual source powers cannot be superposed."
+        }
+      ],
+      "steps": [
+        "At A, KCL is (Ua-V1)/R1 + Ua/R2 + (Ua-V2)/R3 = 0.",
+        "Let G = 1/R1 + 1/R2 + 1/R3. Then Ua due to V1 is (V1/R1)/G; Ua due to V2 is (V2/R3)/G. Divide each by R2 for its load-current contribution.",
+        "With V1 alone, V(A) - V(B) = 9.81818 V, so I = 0.0409091 A.",
+        "With V2 alone, V(A) - V(B) = 1.09091 V, so I = 0.00454545 A.",
+        "I_total = (0.0409091) + (0.00454545) = 0.0454545 A.",
+        "P = (0.0454545)² * 240 = 0.495868 W."
+      ],
+      "hint": "When one source is shorted, its series resistor remains in the circuit.",
+      "constants": {}
+    },
+    {
+      "id": "sp-clamped",
+      "title": "The zero-contribution surprise",
+      "topic": "Superposition",
+      "difficulty": "Challenge",
+      "prompt": "Use superposition to find current in R3, referenced from C to D, then its total power. Use the source selector to inspect each reduced circuit. All sources are independent and ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "J1",
+            "kind": "current",
+            "from": "G",
+            "to": "S",
+            "value": 0.02,
+            "unit": "A"
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "S",
+            "to": "A",
+            "value": 100,
+            "unit": "ohm"
+          },
+          {
+            "id": "V1",
+            "kind": "voltage",
+            "from": "A",
+            "to": "B",
+            "value": 15,
+            "unit": "V"
+          },
+          {
+            "id": "R2",
+            "kind": "resistor",
+            "from": "A",
+            "to": "C",
+            "value": 200,
+            "unit": "ohm"
+          },
+          {
+            "id": "R3",
+            "kind": "resistor",
+            "from": "C",
+            "to": "D",
+            "value": 300,
+            "unit": "ohm"
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "J1",
+          "label": "R3 current: J1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.0",
+          "explanation": "Keep J1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "V1",
+          "label": "R3 current: V1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.03",
+          "explanation": "Keep V1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "total",
+          "label": "R3 total current",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.03",
+          "explanation": "Add the signed contributions; do not add their magnitudes."
+        },
+        {
+          "id": "power",
+          "label": "R3 total power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "0.27",
+          "explanation": "Compute power from the total current: P = I_total² R. Individual source powers cannot be superposed."
+        }
+      ],
+      "steps": [
+        "V1 fixes V(A)-V(B). With V1 alone, R2 and R3 form a series load: I_R3 = V1/(R2+R3).",
+        "With J1 alone, V1 is a short. Both ends of the R2-R3 series path are at the same potential, so its current is zero. The left source current returns through the short.",
+        "With J1 alone, V(C) - V(D) = 0 V, so I = 0 A.",
+        "With V1 alone, V(C) - V(D) = 9 V, so I = 0.03 A.",
+        "I_total = (0) + (0.03) = 0.03 A.",
+        "P = (0.03)² * 300 = 0.27 W."
+      ],
+      "hint": "With V1 switched off, A is shorted to B. Can the left current source change the right-hand voltage?",
+      "constants": {}
+    },
+    {
+      "id": "sp-two-current",
+      "title": "Two current sources meet",
+      "topic": "Superposition",
+      "difficulty": "Developing",
+      "prompt": "Use superposition to find current in R1, referenced from A to B, then its total power. Use the source selector to inspect each reduced circuit. All sources are independent and ideal.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "S",
+            "x": 80,
+            "y": 70
+          },
+          {
+            "id": "A",
+            "x": 350,
+            "y": 70
+          },
+          {
+            "id": "C",
+            "x": 640,
+            "y": 70
+          },
+          {
+            "id": "G",
+            "x": 80,
+            "y": 330
+          },
+          {
+            "id": "B",
+            "x": 350,
+            "y": 330
+          },
+          {
+            "id": "D",
+            "x": 640,
+            "y": 330
+          }
+        ],
+        "parts": [
+          {
+            "id": "J1",
+            "kind": "current",
+            "from": "G",
+            "to": "S",
+            "value": 0.04,
+            "unit": "A"
+          },
+          {
+            "id": "W1",
+            "kind": "wire",
+            "from": "S",
+            "to": "A",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "R1",
+            "kind": "resistor",
+            "from": "A",
+            "to": "B",
+            "value": 150,
+            "unit": "ohm"
+          },
+          {
+            "id": "W2",
+            "kind": "wire",
+            "from": "A",
+            "to": "C",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "J2",
+            "kind": "current",
+            "from": "C",
+            "to": "D",
+            "value": 0.01,
+            "unit": "A"
+          },
+          {
+            "id": "W3",
+            "kind": "wire",
+            "from": "G",
+            "to": "B",
+            "value": 0,
+            "unit": ""
+          },
+          {
+            "id": "W4",
+            "kind": "wire",
+            "from": "B",
+            "to": "D",
+            "value": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "J1",
+          "label": "R1 current: J1 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.04",
+          "explanation": "Keep J1 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "J2",
+          "label": "R1 current: J2 alone",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "-0.01",
+          "explanation": "Keep J2 active. Replace every other ideal voltage source by a short and every other ideal current source by an open circuit."
+        },
+        {
+          "id": "total",
+          "label": "R1 total current",
+          "kind": "numeric",
+          "unit": "A",
+          "options": [],
+          "expected": "0.029999999999999995",
+          "explanation": "Add the signed contributions; do not add their magnitudes."
+        },
+        {
+          "id": "power",
+          "label": "R1 total power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "0.13499999999999995",
+          "explanation": "Compute power from the total current: P = I_total² R. Individual source powers cannot be superposed."
+        }
+      ],
+      "steps": [
+        "With J1 alone, all its injected current returns through R1: I_R1 = J1.",
+        "With J2 alone, it extracts current from the upper rail, so I_R1 = -J2. The combined KCL equation is J1 - J2 - I_R1 = 0.",
+        "With J1 alone, V(A) - V(B) = 6 V, so I = 0.04 A.",
+        "With J2 alone, V(A) - V(B) = -1.5 V, so I = -0.01 A.",
+        "I_total = (0.04) + (-0.01) = 0.03 A.",
+        "P = (0.03)² * 150 = 0.135 W."
+      ],
+      "hint": "Switching off a current source opens its branch. The remaining current source drives R1.",
+      "constants": {}
+    },
+    {
+      "id": "ac-capacitor",
+      "title": "Capacitive reactance",
+      "topic": "AC extension",
+      "difficulty": "Developing",
+      "prompt": "At 50 Hz, calculate the magnitude of the ideal component reactance. Give a positive magnitude, not complex impedance.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 150,
+            "y": 190
+          },
+          {
+            "id": "B",
+            "x": 610,
+            "y": 190
+          }
+        ],
+        "parts": [
+          {
+            "id": "C1",
+            "kind": "capacitor",
+            "from": "A",
+            "to": "B",
+            "value": 1e-05,
+            "unit": "F"
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "X",
+          "label": "Reactance magnitude",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "318.30988618379064",
+          "explanation": "Xc = 1/(2*pi*f*C) = 318.31 ohm."
+        }
+      ],
+      "steps": [
+        "Convert the value to SI units: 1e-05 F.",
+        "omega = 2*pi*50 rad/s.",
+        "Xc = 1/(2*pi*f*C) = 318.31 ohm."
+      ],
+      "hint": "Do not confuse frequency f with angular frequency omega.",
+      "constants": {}
+    },
+    {
+      "id": "ac-inductor",
+      "title": "Inductive reactance",
+      "topic": "AC extension",
+      "difficulty": "Developing",
+      "prompt": "At 400 Hz, calculate the magnitude of the ideal component reactance. Give a positive magnitude, not complex impedance.",
+      "circuit": {
+        "nodes": [
+          {
+            "id": "A",
+            "x": 150,
+            "y": 190
+          },
+          {
+            "id": "B",
+            "x": 610,
+            "y": 190
+          }
+        ],
+        "parts": [
+          {
+            "id": "L1",
+            "kind": "inductor",
+            "from": "A",
+            "to": "B",
+            "value": 0.08,
+            "unit": "H"
+          }
+        ]
+      },
+      "fields": [
+        {
+          "id": "X",
+          "label": "Reactance magnitude",
+          "kind": "numeric",
+          "unit": "ohm",
+          "options": [],
+          "expected": "201.06192982974676",
+          "explanation": "XL = 2*pi*f*L = 201.062 ohm."
+        }
+      ],
+      "steps": [
+        "Convert the value to SI units: 0.08 H.",
+        "omega = 2*pi*400 rad/s.",
+        "XL = 2*pi*f*L = 201.062 ohm."
+      ],
+      "hint": "Do not confuse frequency f with angular frequency omega.",
+      "constants": {}
+    },
+    {
+      "id": "ac-rms",
+      "title": "Peak is not RMS",
+      "topic": "AC extension",
+      "difficulty": "Foundation",
+      "prompt": "A sinusoidal voltage has a peak amplitude of 170 V and drives a 100 ohm resistor. Find RMS voltage and average resistor power.",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "V",
+          "label": "RMS voltage",
+          "kind": "numeric",
+          "unit": "V",
+          "options": [],
+          "expected": "120.20815280171307",
+          "explanation": "For a sine wave, Vrms = Vpeak / sqrt(2)."
+        },
+        {
+          "id": "P",
+          "label": "Average power",
+          "kind": "numeric",
+          "unit": "W",
+          "options": [],
+          "expected": "144.5",
+          "explanation": "Paverage = Vrms²/R, not Vpeak²/R."
+        }
+      ],
+      "steps": [
+        "Vrms = 170/sqrt(2) = 120.208 V.",
+        "Paverage = 120.208²/100 = 144.5 W."
+      ],
+      "hint": "The peak-to-RMS conversion here applies specifically to a sine wave.",
+      "constants": {}
+    },
+    {
+      "id": "ac-charge",
+      "title": "Charge and stored energy",
+      "topic": "AC extension",
+      "difficulty": "Foundation",
+      "prompt": "An ideal 47 microfarad capacitor is charged to 12 V. Calculate its stored charge and energy.",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "Q",
+          "label": "Stored charge",
+          "kind": "numeric",
+          "unit": "C",
+          "options": [],
+          "expected": "0.0005639999999999999",
+          "explanation": "Q = C*V. Convert microfarads to farads."
+        },
+        {
+          "id": "E",
+          "label": "Stored energy",
+          "kind": "numeric",
+          "unit": "J",
+          "options": [],
+          "expected": "0.003384",
+          "explanation": "E = C*V²/2."
+        }
+      ],
+      "steps": [
+        "C = 47e-6 F.",
+        "Q = 47e-6 * 12 = 0.000564 C.",
+        "E = 0.5 * 47e-6 * 12² = 0.003384 J."
+      ],
+      "hint": "Use SI units throughout.",
+      "constants": {}
+    },
+    {
+      "id": "theory-ohm",
+      "title": "What does Ohm law state?",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "For an ideal resistor at fixed conditions, which relation holds?",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "U = R*I",
+            "U = R/I",
+            "I = R*U",
+            "R = U*I"
+          ],
+          "expected": "U = R*I",
+          "explanation": "Voltage drop is proportional to current, with resistance as the proportionality factor."
+        }
+      ],
+      "steps": [
+        "Voltage drop is proportional to current, with resistance as the proportionality factor."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-kcl",
+      "title": "Why does KCL work?",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "The algebraic sum of currents at a node is zero because of:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "Conservation of resistance",
+            "Equal branch currents",
+            "Zero node voltage",
+            "Conservation of charge"
+          ],
+          "expected": "Conservation of charge",
+          "explanation": "Charge does not accumulate at an ideal circuit node; entering and leaving currents balance."
+        }
+      ],
+      "steps": [
+        "Charge does not accumulate at an ideal circuit node; entering and leaving currents balance."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-kvl",
+      "title": "Which loop statement is valid?",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "For a lumped circuit with no unmodelled time-varying magnetic flux, KVL says:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "All loop currents are equal",
+            "Every source voltage is zero",
+            "The algebraic voltage sum around a closed loop is zero",
+            "Every resistor has the same voltage"
+          ],
+          "expected": "The algebraic voltage sum around a closed loop is zero",
+          "explanation": "Use a consistent traversal direction and include source rises and element drops."
+        }
+      ],
+      "steps": [
+        "Use a consistent traversal direction and include source rises and element drops."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-sources",
+      "title": "Deactivate sources correctly",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "For superposition with independent ideal sources, how are inactive sources replaced?",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "Both: open",
+            "Voltage source: short; current source: open",
+            "Voltage source: open; current source: short",
+            "Both: short"
+          ],
+          "expected": "Voltage source: short; current source: open",
+          "explanation": "Setting ideal voltage to zero constrains its terminals to equal potential. Setting ideal current to zero blocks its branch."
+        }
+      ],
+      "steps": [
+        "Setting ideal voltage to zero constrains its terminals to equal potential. Setting ideal current to zero blocks its branch."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-power",
+      "title": "Can powers be superposed?",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "Two source contributions to resistor current are I_a and I_b. Total resistor power is:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "(I_a + I_b)^2 * R",
+            "I_a^2 * R + I_b^2 * R",
+            "(I_a - I_b) * R",
+            "Always zero"
+          ],
+          "expected": "(I_a + I_b)^2 * R",
+          "explanation": "Voltage and current are linear responses. Power is quadratic, so use the signed total current before squaring."
+        }
+      ],
+      "steps": [
+        "Voltage and current are linear responses. Power is quadratic, so use the signed total current before squaring."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-capacitor",
+      "title": "Capacitor in sinusoidal steady state",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "In an ideal capacitor, the current:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "Lags the voltage by 90 degrees",
+            "Is always in phase with voltage",
+            "Must always be zero",
+            "Leads the voltage by 90 degrees"
+          ],
+          "expected": "Leads the voltage by 90 degrees",
+          "explanation": "i = C*dV/dt. For a sine-wave voltage, differentiation gives a quarter-cycle lead."
+        }
+      ],
+      "steps": [
+        "i = C*dV/dt. For a sine-wave voltage, differentiation gives a quarter-cycle lead."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-inductor",
+      "title": "Inductor in sinusoidal steady state",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "In an ideal inductor, the voltage:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "Is always in phase with current",
+            "Is unrelated to frequency",
+            "Leads the current by 90 degrees",
+            "Lags the current by 90 degrees"
+          ],
+          "expected": "Leads the current by 90 degrees",
+          "explanation": "v = L*dI/dt; the voltage leads sinusoidal current by a quarter cycle."
+        }
+      ],
+      "steps": [
+        "v = L*dI/dt; the voltage leads sinusoidal current by a quarter cycle."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-dc-storage",
+      "title": "Ideal storage elements after settling",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "In DC steady state, an ideal capacitor and ideal inductor behave as:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "Both: short",
+            "Capacitor: open; inductor: short",
+            "Capacitor: short; inductor: open",
+            "Both: open"
+          ],
+          "expected": "Capacitor: open; inductor: short",
+          "explanation": "Constant capacitor voltage gives zero capacitor current. Constant inductor current gives zero inductor voltage. This is a steady-state statement, not the switching transient."
+        }
+      ],
+      "steps": [
+        "Constant capacitor voltage gives zero capacitor current. Constant inductor current gives zero inductor voltage. This is a steady-state statement, not the switching transient."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-thevenin",
+      "title": "Recognize a Thevenin equivalent",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "A linear two-terminal network can be represented by:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "An ideal voltage source in series with an equivalent resistance",
+            "An ideal voltage source in parallel with a resistance",
+            "Only an ideal current source",
+            "A resistor that must equal the load"
+          ],
+          "expected": "An ideal voltage source in series with an equivalent resistance",
+          "explanation": "Thevenin voltage is the open-circuit terminal voltage. Equivalent resistance is seen looking into the unloaded network; independent sources are deactivated for the passive resistance method."
+        }
+      ],
+      "steps": [
+        "Thevenin voltage is the open-circuit terminal voltage. Equivalent resistance is seen looking into the unloaded network; independent sources are deactivated for the passive resistance method."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-norton",
+      "title": "Connect Norton and Thevenin",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "For matching terminal references and a finite positive equivalent resistance:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "R_N = 1/R_Th",
+            "V_Th = I_N/R_Th",
+            "I_N always equals the load current",
+            "R_N = R_Th and V_Th = I_N * R_Th"
+          ],
+          "expected": "R_N = R_Th and V_Th = I_N * R_Th",
+          "explanation": "Norton uses an ideal current source in parallel with the equivalent resistance. I_N is the short-circuit terminal current under the chosen reference convention."
+        }
+      ],
+      "steps": [
+        "Norton uses an ideal current source in parallel with the equivalent resistance. I_N is the short-circuit terminal current under the chosen reference convention."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-dependent",
+      "title": "A source-deactivation caveat",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "When finding an equivalent resistance in a network containing dependent sources:",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "Always remove all sources",
+            "Ignore the controlling variable",
+            "Keep dependent sources active and use a test source if necessary",
+            "Deactivate every dependent source"
+          ],
+          "expected": "Keep dependent sources active and use a test source if necessary",
+          "explanation": "Only independent sources are deactivated. A dependent source still obeys its controlling relation."
+        }
+      ],
+      "steps": [
+        "Only independent sources are deactivated. A dependent source still obeys its controlling relation."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    },
+    {
+      "id": "theory-meter",
+      "title": "Connect an ideal meter",
+      "topic": "Theory",
+      "difficulty": "Foundation",
+      "prompt": "How should voltage and current be measured?",
+      "circuit": null,
+      "fields": [
+        {
+          "id": "choice",
+          "label": "Choose one answer",
+          "kind": "choice",
+          "unit": "",
+          "options": [
+            "Voltmeter in series; ammeter in parallel",
+            "Voltmeter in parallel; ammeter in series",
+            "Both in series",
+            "Both in parallel"
+          ],
+          "expected": "Voltmeter in parallel; ammeter in series",
+          "explanation": "An ideal voltmeter has infinite resistance; an ideal ammeter has zero resistance. Real instruments approximate these limits."
+        }
+      ],
+      "steps": [
+        "An ideal voltmeter has infinite resistance; an ideal ammeter has zero resistance. Real instruments approximate these limits."
+      ],
+      "hint": "Explain the physical law before comparing the choices.",
+      "constants": {}
+    }
+  ]
+}
