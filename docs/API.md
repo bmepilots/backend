@@ -105,3 +105,11 @@ The existing self-service password-change endpoint also returns 409 if a concurr
 ## Exam prep (contract 5)
 
 Authenticated ACTIVE members: GET `/study/subjects`, GET `/study/progress`, POST `/study/attempts`, GET `/study/attempts/{id}`. Mutations require CSRF. Grading is server-owned; catalog responses omit solution keys. Attempts and results are owner-only, replay-safe and versioned. See `STUDY.md` for full DTOs, grading syntax, mock blueprint and error behavior. Flyway V11 persists attempts; older contracts remain supported.
+
+## Shared mail moderation (contract 6)
+
+- PATCH `/admin/mail/messages/{id}/importance`: required `{importantForEveryone: boolean, version: nonnegative integer}`; 204. ADMIN + CSRF. Shared importance applies to every current/future member, independent of personal `isImportant`.
+- DELETE `/admin/mail/messages/{id}`: required `{version: nonnegative integer}`; 204. ADMIN + CSRF. Soft deletes only the portal copy, cancels PENDING forwarding and denies subsequent detail/state/download access. Gmail and in-flight/delivered copies are unaffected. Repeating an already deleted existing ID is a no-op 204; unknown ID is 404.
+- Summaries and detail message bodies add `importantForEveryone` and `moderationVersion`. Deleted rows are excluded from lists/search and dashboard unread counts. Stale versions return 409; null/missing/invalid payload fields return 400. Refresh before retrying stale or ambiguous writes. See MAIL for retention and concurrency details.
+
+Backend Docker labels support 1–6; the matching frontend requires 6. V12 is additive and does not change personal read/star semantics.

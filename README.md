@@ -131,3 +131,7 @@ Compilation: `./mvnw -DskipTests compile`. Full tests: `pwsh -File scripts/test.
 ## Exam prep — API contract 5
 
 The new Exam prep area provides 38 original engineering exercises, an interactive circuit explorer, Learn/Practice/Mock exam flows and private saved results. Backend Flyway V11 owns study-attempt storage; Docker MariaDB and existing backups are reused. See `docs/STUDY.md` for source analysis, ownership, grading, extension and operational details. Local implementation does not imply deployment; consult STATUS for evidence.
+
+## Shared inbox moderation (API contract 6)
+
+In Shared inbox, admins can open a message and choose **Mark important for everyone**, **Remove importance for everyone**, or **Delete for everyone**. Shared importance is visible to all members, including future members, and remains separate from personal stars/read flags. Deletion asks for confirmation, removes the portal message and its download access for everyone, and cancels queued forwarding. It does not modify Gmail or recall copies already sending/delivered. Deleted messages are retained internally for synchronization deduplication and backup consistency; this is not a permanent data-erasure operation. See docs/MAIL.md for concurrency, audit and retention details.

@@ -1,0 +1,4 @@
+ALTER TABLE mail_messages
+ ADD COLUMN important_for_everyone BOOLEAN NOT NULL DEFAULT FALSE,
+ ADD COLUMN moderation_version BIGINT NOT NULL DEFAULT 0,
+ ADD COLUMN deleted_at DATETIME(6) NULL;

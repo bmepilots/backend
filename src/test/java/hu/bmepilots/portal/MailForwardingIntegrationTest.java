@@ -134,6 +134,7 @@ class MailForwardingIntegrationTest {
   void cleanup() {
     db.sql("UPDATE mail_forwarding_settings SET enabled=FALSE,enabled_at=NULL WHERE id=1").update();
     for (String id : messages) {
+      db.sql("DELETE FROM user_mail_state WHERE message_id=?").param(id).update();
       db.sql("DELETE FROM mail_forwarding_outbox WHERE message_id=?").param(id).update();
       db.sql("DELETE FROM mail_attachments WHERE message_id=?").param(id).update();
       db.sql("DELETE FROM mail_message_addresses WHERE message_id=?").param(id).update();
@@ -244,6 +245,134 @@ class MailForwardingIntegrationTest {
         .param(id)
         .query(String.class)
         .single();
+  }
+
+  @Test
+  void sharedModerationRequiresAdminCsrfAndVersionAndPreservesPersonalFlags() throws Exception {
+    String id = importMessage(incoming(Instant.now(), "sender@example.test", false));
+    String path = "/admin/mail/messages/" + id;
+    Client member = new Client();
+    member.login(memberId);
+    var change = Map.of("importantForEveryone", true, "version", 0);
+    new Client().ok("PATCH", path + "/importance", change, 401);
+    member.ok("PATCH", path + "/importance", change, 403);
+    member.ok("DELETE", path, Map.of("version", 0), 403);
+    assertThat(admin.send("PATCH", path + "/importance", change, false).statusCode())
+        .isEqualTo(403);
+    assertThat(admin.send("DELETE", path, Map.of("version", 0), false).statusCode()).isEqualTo(403);
+    admin.ok("PATCH", path + "/importance", Map.of("version", 0), 400);
+    admin.ok("DELETE", path, Map.of("version", -1), 400);
+    member.ok(
+        "PATCH",
+        "/mail/messages/" + id + "/state",
+        Map.of("isRead", true, "isImportant", true),
+        204);
+    admin.ok("PATCH", path + "/importance", change, 204);
+    assertThat(
+            member
+                .ok("GET", "/mail/messages/" + id, null, 200)
+                .get("message")
+                .get("importantForEveryone")
+                .asBoolean())
+        .isTrue();
+    Client newcomer = new Client();
+    newcomer.login(user("ACTIVE", "USER", null));
+    assertThat(
+            newcomer
+                .ok("GET", "/mail/messages/" + id, null, 200)
+                .get("message")
+                .get("importantForEveryone")
+                .asBoolean())
+        .isTrue();
+    admin.ok(
+        "PATCH", path + "/importance", Map.of("importantForEveryone", false, "version", 0), 409);
+    admin.ok("DELETE", path, Map.of("version", 0), 409);
+    admin.ok(
+        "PATCH", path + "/importance", Map.of("importantForEveryone", false, "version", 1), 204);
+    assertThat(
+            member
+                .ok("GET", "/mail/messages/" + id, null, 200)
+                .get("message")
+                .get("importantForEveryone")
+                .asBoolean())
+        .isFalse();
+    assertThat(
+            db.sql(
+                    "SELECT is_read AND is_important FROM user_mail_state WHERE user_id=? AND message_id=?")
+                .params(memberId, id)
+                .query(Boolean.class)
+                .single())
+        .isTrue();
+    assertThat(
+            db.sql(
+                    "SELECT COUNT(*) FROM audit_log WHERE entity_id=? AND action IN ('MAIL_IMPORTANT_FOR_EVERYONE','MAIL_IMPORTANCE_REMOVED')")
+                .param(id)
+                .query(Long.class)
+                .single())
+        .isEqualTo(2);
+  }
+
+  @Test
+  void deletionHidesAllMemberAccessCancelsPendingAndKeepsDeduplicationTombstone() throws Exception {
+    toggle(true);
+    String id = importMessage(incoming(Instant.now(), "sender@example.test", true));
+    String queued = onlyDelivery(id, memberId);
+    String attachmentId = UUID.randomUUID().toString();
+    String key = storage.save(new byte[] {1, 2, 3});
+    storedFiles.add(key);
+    db.sql(
+            "INSERT INTO mail_attachments(id,message_id,filename,content_type,size_bytes,storage_key) VALUES (?,?,?,'text/plain',3,?)")
+        .params(attachmentId, id, "fixture.txt", key)
+        .update();
+    Client member = new Client();
+    member.login(memberId);
+    long before = member.ok("GET", "/dashboard", null, 200).get("unreadMailCount").asLong();
+    admin.ok("DELETE", "/admin/mail/messages/" + id, Map.of("version", 0), 204);
+    admin.ok("DELETE", "/admin/mail/messages/" + id, Map.of("version", 0), 204);
+    assertThat(state(queued)).isEqualTo("CANCELLED");
+    member.ok("GET", "/mail/messages/" + id, null, 404);
+    member.ok("PATCH", "/mail/messages/" + id + "/state", Map.of("isRead", true), 404);
+    member.ok(
+        "GET", "/mail/messages/" + id + "/attachments/" + attachmentId + "/download", null, 404);
+    assertThat(
+            member.ok("GET", "/mail/messages?q=Private%20fixture%20briefing", null, 200).toString())
+        .doesNotContain(id);
+    assertThat(member.ok("GET", "/dashboard", null, 200).get("unreadMailCount").asLong())
+        .isEqualTo(before - 1);
+    assertThat(
+            db.sql(
+                    "SELECT provider_message_id FROM mail_messages WHERE id=? AND deleted_at IS NOT NULL")
+                .param(id)
+                .query(String.class)
+                .single())
+        .isNotBlank();
+    assertThat(
+            db.sql(
+                    "SELECT COUNT(*) FROM audit_log WHERE entity_id=? AND action='MAIL_DELETED_FOR_EVERYONE'")
+                .param(id)
+                .query(Long.class)
+                .single())
+        .isEqualTo(1);
+    forwarding.dispatch();
+    verify(delivery, never()).deliver(any());
+  }
+
+  @Test
+  void deletionDuringSendPreventsRetryResurrection() throws Exception {
+    toggle(true);
+    String id = importMessage(incoming(Instant.now(), "sender@example.test", true));
+    String queued = onlyDelivery(id, memberId);
+    when(delivery.deliver(any()))
+        .thenAnswer(
+            invocation -> {
+              admin.ok("DELETE", "/admin/mail/messages/" + id, Map.of("version", 0), 204);
+              return new MailDelivery.Result(
+                  MailDelivery.Outcome.RETRYABLE, "SMTP_CONNECTION_FAILED");
+            });
+    forwarding.dispatch();
+    assertThat(state(queued)).isEqualTo("CANCELLED");
+    forwarding.dispatch();
+    verify(delivery, times(1)).deliver(any());
   }
 
   @Test
@@ -405,6 +534,14 @@ class MailForwardingIntegrationTest {
           .atMost(Duration.ofSeconds(10))
           .until(() -> !sync.status().running());
       assertThat(recipients(id)).hasSize(count).doesNotContain(newcomer);
+      admin.ok("DELETE", "/admin/mail/messages/" + id, Map.of("version", 0), 204);
+      fixture.next = new MailProvider.Batch(303, 1, List.of(original), List.of());
+      sync.requestSync();
+      org.awaitility.Awaitility.await()
+          .atMost(Duration.ofSeconds(10))
+          .until(() -> !sync.status().running());
+      admin.ok("GET", "/mail/messages/" + id, null, 404);
+      assertThat(recipients(id)).hasSize(count).doesNotContain(newcomer);
       assertThat(
               db.sql("SELECT COUNT(*) FROM mail_messages WHERE account_id=?")
                   .param(accountId)
@@ -416,7 +553,7 @@ class MailForwardingIntegrationTest {
                   .param(id)
                   .query(Long.class)
                   .single())
-          .isEqualTo(2);
+          .isEqualTo(3);
     } finally {
       sync.close();
     }

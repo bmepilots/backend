@@ -17,7 +17,7 @@ RUN ./mvnw -B -DskipTests package \
 
 FROM eclipse-temurin:21-jre-jammy
 
-LABEL io.bmepilots.api.contracts="1,2,3,4,5"
+LABEL io.bmepilots.api.contracts="1,2,3,4,5,6"
 
 WORKDIR /app
 

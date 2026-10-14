@@ -283,7 +283,9 @@ public class MailForwardingService {
             .param(p.userId())
             .query(Member.class)
             .single();
-    if (!member.status().equals("ACTIVE") || sameMailbox(member.email(), username)) {
+    if (!member.status().equals("ACTIVE")
+        || sameMailbox(member.email(), username)
+        || deleted(p.messageId())) {
       db.sql(
               "UPDATE mail_forwarding_outbox SET state='CANCELLED',updated_at=CURRENT_TIMESTAMP(6) WHERE id=?")
           .param(p.id())
@@ -302,7 +304,10 @@ public class MailForwardingService {
   private void complete(Pending pending, MailDelivery.Result result) {
     // Serialize with disable so a known pre-send failure cannot recreate a cancelled backlog.
     var settings = settings(true);
-    boolean enabled = settings.enabled() && settings.version() == pending.enableVersion();
+    boolean enabled =
+        settings.enabled()
+            && settings.version() == pending.enableVersion()
+            && !deleted(pending.messageId());
     String state = result.outcome().name();
     if (result.outcome() == MailDelivery.Outcome.RETRYABLE)
       state = !enabled ? "CANCELLED" : pending.attempts() >= 2 ? "FAILED" : "PENDING";
@@ -316,5 +321,12 @@ public class MailForwardingService {
         "MAIL_FORWARDING_" + (state.equals("PENDING") ? "RETRY_SCHEDULED" : state),
         "MAIL_DELIVERY",
         pending.id());
+  }
+
+  private boolean deleted(String messageId) {
+    return db.sql("SELECT deleted_at IS NOT NULL FROM mail_messages WHERE id=?")
+        .param(messageId)
+        .query(Boolean.class)
+        .single();
   }
 }

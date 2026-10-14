@@ -64,6 +64,18 @@ public class MailController {
     return sync.status();
   }
 
+  @PatchMapping("/admin/mail/messages/{id}/importance")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  void importance(@PathVariable String id, @Valid @RequestBody MailService.Importance change) {
+    service.importance(id, change);
+  }
+
+  @DeleteMapping("/admin/mail/messages/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  void delete(@PathVariable String id, @Valid @RequestBody MailService.Delete change) {
+    service.delete(id, change);
+  }
+
   @GetMapping("/admin/mail/forwarding")
   Object forwarding() {
     return forwarding.status();

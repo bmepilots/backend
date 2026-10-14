@@ -95,3 +95,7 @@ All /api/v1/admin/** requires ADMIN; all other private APIs require active authe
 ## Exam prep — API contract 5
 
 The new Exam prep area provides 38 original engineering exercises, an interactive circuit explorer, Learn/Practice/Mock exam flows and private saved results. Backend Flyway V11 owns study-attempt storage; Docker MariaDB and existing backups are reused. See `STUDY.md` for source analysis, ownership, grading, extension and operational details. Local implementation does not imply deployment; consult STATUS for evidence.
+
+## Shared mail moderation
+
+V12 adds global importance, optimistic moderation version and deletion timestamp to mail_messages. MailService owns admin-only moderation, uses parameterized SQL, transactional audit and row locking, and excludes deleted messages from every member access path. Importance remains distinct from personal flags. Deletion preserves message identity and files for import deduplication, in-flight forwarding and consistent backups. It serializes through the forwarding-settings lock before the message lock, cancels queued work, and forwarding claim/completion reject deleted-message retries. No Gmail mutation is introduced. See MAIL for API, retention and concurrency invariants. This additive client capability is API contract 6; older contracts remain supported.
